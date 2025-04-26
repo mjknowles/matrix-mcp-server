@@ -6,11 +6,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 
-# Assuming client.py and its dependencies are available
-# You might need to adjust imports based on your project structure
-from client import MatrixClient, MatrixRequestError  #
-from mcp.server.fastmcp import Context, FastMCP  #
-from mcp.server.models import CallToolResult
+from matrix_client.client import MatrixClient, MatrixRequestError  #
+from mcp.server.fastmcp import FastMCP, Context
 import mcp.types as types
 
 # --- Configuration ---
@@ -18,10 +15,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # --- MCP Server Setup ---
-# Initialize FastMCP server [cite: 759]
+# Initialize FastMCP server
 mcp = FastMCP(
-    "matrix-mcp-server",
-    dependencies=["matrix-client"], # Add any other necessary dependencies
+    name="matrix-mcp-server",  # Ensure the name matches your server's purpose
+    dependencies=[],  # Adjust dependencies as needed
 )
 
 # FastAPI app setup
