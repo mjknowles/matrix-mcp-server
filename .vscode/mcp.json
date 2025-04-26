@@ -1,0 +1,17 @@
+{
+  "servers": {
+    "fast-markdown": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "devdocs-mcp",
+        "python",
+        "-m",
+        "fast_markdown_mcp.server",
+        "/app/storage/markdown"
+      ]
+    }
+  }
+}
