@@ -1,1 +1,1 @@
-# matrix-map
+# matrix-mcp
