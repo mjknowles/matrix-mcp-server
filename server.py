@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 
-from matrix_client.client import MatrixClient, MatrixRequestError  #
+from matrix_client.client import MatrixClient, MatrixRequestError, CACHE
 from mcp.server.fastmcp import FastMCP, Context
 import mcp.types as types
 
@@ -79,7 +79,7 @@ async def connect_matrix(
     global matrix_client_instance
     if matrix_client_instance:
         # Optionally disconnect the old client or return an error/warning
-        logger.warning("Matrix client already connected. Reconnecting.")
+        context.warning("Matrix client already connected. Reconnecting.")
         try:
             # Attempt graceful stop if implementing background listening
             if hasattr(matrix_client_instance, 'stop_listener_thread'):
@@ -87,13 +87,13 @@ async def connect_matrix(
             if hasattr(matrix_client_instance, 'logout'):
                  await asyncio.to_thread(matrix_client_instance.logout) #
         except Exception as e:
-            logger.error(f"Error logging out previous Matrix client: {e}")
+            context.error(f"Error logging out previous Matrix client: {e}")
         matrix_client_instance = None
 
     try:
         if token and homeserver_url:
             # Connect using token
-            logger.info(f"Connecting to {homeserver_url} with token for user {user_id}")
+            await ctx.info(f"Connecting to {homeserver_url} with token for user {user_id}")
             # We need user_id to initialize the client object state even with token
             # The client.py implementation fetches user_id via /whoami if token is provided
             # but let's instantiate it first. A better client.py might handle this internally.
@@ -104,7 +104,7 @@ async def connect_matrix(
             return f"Successfully connected to {homeserver_url} as {client.user_id}."
         elif username and password and homeserver_url:
             # Connect using username/password
-            logger.info(f"Connecting to {homeserver_url} with username {username}")
+            await ctx.info(f"Connecting to {homeserver_url} with username {username}")
             client = MatrixClient(base_url=homeserver_url, valid_cert_check=True, cache_level=CACHE.ALL) #
             # client.py's login function handles token setting and initial sync
             await asyncio.to_thread(
@@ -120,12 +120,12 @@ async def connect_matrix(
             raise ValueError("Insufficient details. Provide homeserver_url and either token or username/password.")
 
     except MatrixRequestError as e:
-        logger.error(f"Matrix connection error: {e.code} - {e.content}")
+        await ctx.error(f"Matrix connection error: {e.code} - {e.content}")
         matrix_client_instance = None
         # Returning error details in the result might be better for the client
         raise ConnectionError(f"Matrix connection failed: {e.code} - {e.content}") from e
     except Exception as e:
-        logger.exception("Failed to connect to Matrix.")
+        await ctx.error("Failed to connect to Matrix.")
         matrix_client_instance = None
         raise ConnectionError(f"An unexpected error occurred during Matrix connection: {e}") from e
 
@@ -146,11 +146,12 @@ async def list_joined_rooms(ctx: Context = Context()) -> List[Dict[str, str]]:
     try:
         # The client.py populates self.rooms during sync
         # Ensure an up-to-date sync before accessing
-        await asyncio.to_thread(matrix_client_instance._sync) #
+        #await ctx.info(f"awaiting sync")
+        #await asyncio.to_thread(matrix_client_instance._sync) #
 
         room_list = []
         # client.rooms is a dict {room_id: Room}
-        for room_id, room_obj in matrix_client_instance.rooms.items():
+        for room_id, room_obj in matrix_client_instance.get_rooms().items():
             # Attempt to get a display name for the room
             # Room object in client.py might have methods like get_display_name()
             # or attributes like display_name, canonical_alias. Assuming a hypothetical `get_display_name`
@@ -164,7 +165,7 @@ async def list_joined_rooms(ctx: Context = Context()) -> List[Dict[str, str]]:
             room_list.append({"room_id": room_id, "name": name})
         return room_list
     except Exception as e:
-        logger.exception("Failed to list Matrix rooms.")
+        await ctx.error("Failed to list Matrix rooms.")
         raise RuntimeError(f"Failed to list rooms: {e}") from e
 
 @mcp.tool()
@@ -211,7 +212,7 @@ async def get_room_messages(room_id: str, limit: int = 20, ctx: Context = Contex
              # E.g., events = await asyncio.to_thread(room.get_messages, limit=limit)
              # This depends heavily on the actual implementation of Room in client.py
              # For now, we'll rely on the sync having populated *some* state/timeline.
-             logger.warning(f"Room object for {room_id} doesn't have a standard 'events' list. Returning empty. Check Room class implementation in client.py.")
+             await ctx.warning(f"Room object for {room_id} doesn't have a standard 'events' list. Returning empty. Check Room class implementation in client.py.")
              # Attempting a sync might populate internal state even if not directly exposed.
 
         # Minimal formatting, returning raw-ish event dictionary
@@ -228,13 +229,13 @@ async def get_room_messages(room_id: str, limit: int = 20, ctx: Context = Contex
                     "content": event.get("content", {}), # Ensure content exists
                  })
             else:
-                 logger.warning(f"Skipping non-dictionary event in room {room_id}: {event}")
+                 await ctx.warning(f"Skipping non-dictionary event in room {room_id}: {event}")
 
 
         return formatted_events
 
     except Exception as e:
-        logger.exception(f"Failed to get messages for room {room_id}.")
+        await ctx.error(f"Failed to get messages for room {room_id}.")
         raise RuntimeError(f"Failed to get messages for room {room_id}: {e}") from e
 
 
@@ -264,7 +265,7 @@ async def get_missed_messages(room_id: str, since_token: Optional[str] = None, c
 
     # Use the provided 'since_token' if available, otherwise use the client's current token
     current_sync_token = since_token or matrix_client_instance.sync_token
-    logger.info(f"Syncing room {room_id} since token: {current_sync_token}")
+    await ctx.info(f"Syncing room {room_id} since token: {current_sync_token}")
 
     try:
         # Perform a sync. We need to filter the response manually.
@@ -294,10 +295,10 @@ async def get_missed_messages(room_id: str, since_token: Optional[str] = None, c
                     "content": event.get("content", {}),
                  })
              else:
-                  logger.warning(f"Skipping non-dictionary event in room {room_id} during sync: {event}")
+                  await ctx.warning(f"Skipping non-dictionary event in room {room_id} during sync: {event}")
 
 
-        logger.info(f"Found {len(formatted_events)} new events in room {room_id}. Next token: {next_batch_token}")
+        await ctx.info(f"Found {len(formatted_events)} new events in room {room_id}. Next token: {next_batch_token}")
 
         return {
             "messages": formatted_events,
@@ -305,7 +306,7 @@ async def get_missed_messages(room_id: str, since_token: Optional[str] = None, c
         }
 
     except Exception as e:
-        logger.exception(f"Failed to sync messages for room {room_id}.")
+        await ctx.error(f"Failed to sync messages for room {room_id}.")
         # Restore previous sync token on failure? Depends on desired behaviour.
         matrix_client_instance.sync_token = token_before_sync
         raise RuntimeError(f"Failed to sync messages for room {room_id}: {e}") from e
@@ -337,7 +338,7 @@ async def get_room_members(room_id: str, ctx: Context = Context()) -> List[Dict[
         # or accessing a 'members' attribute updated by sync. Adapt based on client.py.
         # Assuming a hypothetical `get_joined_members()` method exists on the Room object.
         if not hasattr(room, 'get_joined_members'):
-             logger.error(f"Room object for {room_id} lacks expected 'get_joined_members' method. Cannot fetch members.")
+             await ctx.error(f"Room object for {room_id} lacks expected 'get_joined_members' method. Cannot fetch members.")
              # Try syncing state as a fallback?
              await asyncio.to_thread(room._fetch_members) # Assuming another hypothetical method
              if not hasattr(room, 'get_joined_members'): # Check again after potential fetch
@@ -356,18 +357,17 @@ async def get_room_members(room_id: str, ctx: Context = Context()) -> List[Dict[
                     "display_name": getattr(user, 'displayname', user.user_id)
                  })
              else:
-                  logger.warning(f"Found member object without user_id in room {room_id}: {user}")
+                  await ctx.warning(f"Found member object without user_id in room {room_id}: {user}")
 
 
         return member_list
 
     except Exception as e:
-        logger.exception(f"Failed to get members for room {room_id}.")
+        await ctx.error(f"Failed to get members for room {room_id}.")
         raise RuntimeError(f"Failed to get members for room {room_id}: {e}") from e
 
 
 # --- Server Execution ---
 if __name__ == "__main__":
     import uvicorn
-    logger.info("Starting Matrix MCP Server with FastAPI...")
     uvicorn.run(app, host="0.0.0.0", port=8000)

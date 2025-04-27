@@ -34,6 +34,12 @@
 
    By default, the server will run on `http://0.0.0.0:8000`.
 
+## Test the Server
+
+```
+fastmcp dev server.py
+```
+
 ## Example Usage
 
 ### Connect to a Matrix Homeserver

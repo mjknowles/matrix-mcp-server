@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    working_dir: /workspace
+    ports:
+      - "8000:8000"
+    networks:
+      - dev_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - PYTHONPATH=/workspace
+      - DOCKER_HOST=socat:2375
+
+  socat:
+    image: alpine/socat
+    command: tcp-listen:2375,reuseaddr,fork unix-connect:/var/run/docker.sock
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - dev_network
+
+networks:
+  dev_network:
+    driver: bridge
