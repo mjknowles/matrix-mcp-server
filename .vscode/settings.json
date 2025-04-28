@@ -1,0 +1,5 @@
+{
+  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+}

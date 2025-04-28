@@ -2,12 +2,12 @@
 
 ## Overview
 
-`matrix-mcp` is a FastAPI-based server that provides tools for interacting with a Matrix homeserver. It includes features such as connecting to a Matrix server, listing joined rooms, fetching room messages, and more.
+`matrix-mcp` is an MCP server implemented in TypeScript that provides tools for interacting with a Matrix homeserver. It includes features such as connecting to a Matrix server, listing joined rooms, fetching room messages, and more.
 
 ## Prerequisites
 
-- Python 3.8 or higher
-- `pip` (Python package installer)
+- Node.js 20 or higher
+- npm (Node package manager)
 
 ## Setup Instructions
 
@@ -19,49 +19,44 @@
    ```
 
 2. **Install Dependencies**
-   Ensure you have a `requirements.txt` file in the project directory. Install the dependencies using:
 
    ```bash
-   pip install -r requirements.txt
+   npm install
    ```
 
 3. **Run the Server**
-   Start the FastAPI server using `uvicorn`:
+
+   Start the MCP server in development mode:
 
    ```bash
-   python server.py
+   npm run dev
    ```
 
-   By default, the server will run on `http://0.0.0.0:8000`.
+   To build and run the server in production mode:
+
+   ```bash
+   npm run build
+   npm start
+   ```
+
+   By default, the server will run on `http://localhost:3000`.
 
 ## Test the Server
 
-```
-fastmcp dev server.py
-```
-
-## Example Usage
-
-### Connect to a Matrix Homeserver
-
-Send a POST request to `/connect` with the following JSON payload:
+You can test the server using tools like Postman or curl. For example, to connect to a Matrix homeserver, send a POST request to `/connect-matrix` with the following JSON payload:
 
 ```json
 {
-  "homeserver_url": "https://matrix.org",
+  "homeserverUrl": "https://matrix.org",
   "username": "your-username",
   "password": "your-password"
 }
 ```
 
-### List Joined Rooms
-
-Send a request to the `/list_joined_rooms` endpoint after connecting.
-
 ## Notes
 
 - This project is for development purposes. For production use, ensure proper session management and security measures are implemented.
-- Refer to the `client.py` and other dependencies for additional configuration options.
+- Refer to the `src/server.ts` file for additional configuration options.
 
 ## License
 

@@ -1,6 +1,0 @@
-matrix_client
-fastapi
-mcp
-uvicorn
-pytest
-pytest-asyncio

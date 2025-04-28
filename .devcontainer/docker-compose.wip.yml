@@ -16,7 +16,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      - PYTHONPATH=/workspace
       - DOCKER_HOST=socat:2375
 
   socat:
