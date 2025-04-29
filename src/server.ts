@@ -24,10 +24,10 @@ server.tool(
   "connect-matrix",
   {
     homeserverUrl: z.string(),
-    userId: z.string().optional(),
-    token: z.string().optional(),
-    username: z.string().optional(),
-    password: z.string().optional(),
+    userId: z.string().nullable(),
+    token: z.string().nullable(),
+    username: z.string().nullable(),
+    password: z.string().nullable(),
   },
   async ({ homeserverUrl, userId, token, username, password }) => {
     if (matrixClientInstance) {
@@ -40,7 +40,7 @@ server.tool(
     }
 
     try {
-      if (token) {
+      if (token && userId) {
         server.server.sendLoggingMessage({
           level: "info",
           data: "Initializing MatrixClient with token...",
@@ -58,9 +58,15 @@ server.tool(
         matrixClientInstance = new MatrixClient({
           baseUrl: homeserverUrl,
         });
-        await matrixClientInstance.login("m.login.password", {
+        const loginResp = await matrixClientInstance.loginRequest({
           user: username,
           password,
+          type: "m.login.password",
+        });
+        matrixClientInstance = new MatrixClient({
+          baseUrl: homeserverUrl,
+          accessToken: loginResp.access_token,
+          userId: loginResp.user_id,
         });
       } else {
         throw new Error(
@@ -72,7 +78,7 @@ server.tool(
         level: "info",
         data: "Starting Matrix client...",
       });
-      await matrixClientInstance.startClient();
+      await matrixClientInstance.startClient({ initialSyncLimit: 10 });
       server.server.sendLoggingMessage({
         level: "info",
         data: "Matrix client started successfully.",
@@ -103,15 +109,14 @@ server.tool("list-joined-rooms", {}, async () => {
 
   try {
     const rooms = matrixClientInstance.getRooms();
-    const roomList = rooms.map((room) => ({
-      room_id: room.roomId,
-      name: room.name || room.roomId,
-    }));
-
+    server.server.sendLoggingMessage({
+      level: "info",
+      data: `Room count: ${rooms.length}`,
+    });
     return {
-      content: roomList.map((room) => ({
+      content: rooms.map((room) => ({
         type: "text",
-        text: `Room ID: ${room.room_id}, Name: ${room.name}`,
+        text: `Room ID: ${room.roomId}, Name: ${room.name}`,
       })),
     };
   } catch (error: any) {
