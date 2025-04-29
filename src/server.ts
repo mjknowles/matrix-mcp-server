@@ -3,10 +3,19 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { MatrixClient } from "matrix-js-sdk";
 import { z } from "zod";
 
-const server = new McpServer({
-  name: "matrix-mcp-server",
-  version: "1.0.0",
-});
+const server = new McpServer(
+  {
+    name: "matrix-mcp-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      logging: {},
+      resources: {},
+      tools: {},
+    },
+  }
+);
 
 let matrixClientInstance: MatrixClient | null = null;
 
@@ -22,21 +31,30 @@ server.tool(
   },
   async ({ homeserverUrl, userId, token, username, password }) => {
     if (matrixClientInstance) {
-      console.warn("Matrix client already connected. Reconnecting.");
+      server.server.sendLoggingMessage({
+        level: "warning",
+        data: "Matrix client already connected. Reconnecting.",
+      });
       matrixClientInstance.stopClient();
       matrixClientInstance = null;
     }
 
     try {
       if (token) {
-        console.log("Initializing MatrixClient with token...");
+        server.server.sendLoggingMessage({
+          level: "info",
+          data: "Initializing MatrixClient with token...",
+        });
         matrixClientInstance = new MatrixClient({
           baseUrl: homeserverUrl,
           accessToken: token,
           userId,
         });
       } else if (username && password) {
-        console.log("Initializing MatrixClient with username and password...");
+        server.server.sendLoggingMessage({
+          level: "info",
+          data: "Initializing MatrixClient with username and password...",
+        });
         matrixClientInstance = new MatrixClient({
           baseUrl: homeserverUrl,
         });
@@ -50,9 +68,15 @@ server.tool(
         );
       }
 
-      console.log("Starting Matrix client...");
+      server.server.sendLoggingMessage({
+        level: "info",
+        data: "Starting Matrix client...",
+      });
       await matrixClientInstance.startClient();
-      console.log("Matrix client started successfully.");
+      server.server.sendLoggingMessage({
+        level: "info",
+        data: "Matrix client started successfully.",
+      });
       return {
         content: [
           {
@@ -61,8 +85,11 @@ server.tool(
           },
         ],
       };
-    } catch (error) {
-      console.error("Failed to connect to Matrix:", error);
+    } catch (error: any) {
+      server.server.sendLoggingMessage({
+        level: "error",
+        data: `Failed to connect to Matrix: ${error.message}`,
+      });
       throw error;
     }
   }
@@ -87,8 +114,11 @@ server.tool("list-joined-rooms", {}, async () => {
         text: `Room ID: ${room.room_id}, Name: ${room.name}`,
       })),
     };
-  } catch (error) {
-    console.error("Failed to list joined rooms:", error);
+  } catch (error: any) {
+    server.server.sendLoggingMessage({
+      level: "error",
+      data: `Failed to list joined rooms: ${error.message}`,
+    });
     throw error;
   }
 });
@@ -124,58 +154,15 @@ server.tool(
           text: `Event ID: ${message.event_id}, Sender: ${message.sender}, Type: ${message.type}, Timestamp: ${message.timestamp}`,
         })),
       };
-    } catch (error) {
-      console.error("Failed to get room messages:", error);
+    } catch (error: any) {
+      server.server.sendLoggingMessage({
+        level: "error",
+        data: `Failed to get room messages: ${error.message}`,
+      });
       throw error;
     }
   }
 );
-
-// Tool: Get missed messages
-// server.tool(
-//   "get-missed-messages",
-//   {
-//     roomId: z.string(),
-//     sinceToken: z.string().optional(),
-//   },
-//   async ({ roomId, sinceToken }) => {
-//     if (!matrixClientInstance) {
-//       throw new Error("Not connected to Matrix. Use connect-matrix first.");
-//     }
-
-//     try {
-//       const syncResponse = {await matrixClientInstance.synsync({
-//         filter: {
-//           room: {
-//             timeline: { limit: 50 },
-//           },
-//         },
-//         since: sinceToken,
-//       });}
-
-//       const roomData = syncResponse.rooms?.join?.[roomId];
-//       if (!roomData) {
-//         throw new Error(`No data found for room ID ${roomId}.`);
-//       }
-
-//       const messages = roomData.timeline.events.map((event) => ({
-//         event_id: event.event_id,
-//         sender: event.sender,
-//         type: event.type,
-//         content: event.content,
-//         timestamp: event.origin_server_ts,
-//       }));
-
-//       return {
-//         messages,
-//         nextSyncToken: syncResponse.next_batch,
-//       };
-//     } catch (error) {
-//       console.error("Failed to get missed messages:", error);
-//       throw error;
-//     }
-//   }
-// );
 
 // Tool: Get room members
 server.tool(
@@ -205,8 +192,11 @@ server.tool(
           text: `User ID: ${member.user_id}, Display Name: ${member.display_name}`,
         })),
       };
-    } catch (error) {
-      console.error("Failed to get room members:", error);
+    } catch (error: any) {
+      server.server.sendLoggingMessage({
+        level: "error",
+        data: `Failed to get room members: ${error.message}`,
+      });
       throw error;
     }
   }
