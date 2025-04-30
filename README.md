@@ -53,6 +53,22 @@ You can test the server using tools like Postman or curl. For example, to connec
 }
 ```
 
+### Add to VSCode
+
+```
+{
+  "servers": {
+    "matrix-mcp": {
+      "type": "stdio",
+      "command": "<full-path-to>/node",
+      "args": [
+        "<full-path-to>/matrix-mcp-server/dist/server.js"
+      ]
+    }
+  }
+}
+```
+
 ## Notes
 
 - This project is for development purposes. For production use, ensure proper session management and security measures are implemented.
