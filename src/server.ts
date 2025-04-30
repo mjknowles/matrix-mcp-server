@@ -145,7 +145,7 @@ server.tool(
       return {
         content: messages.map((message) => ({
           type: "text",
-          text: `Event ID: ${message.event_id}, Sender: ${message.sender}, Type: ${message.type}, Timestamp: ${message.timestamp}`,
+          text: `Content: ${message.content}, Event ID: ${message.event_id}, Sender: ${message.sender}, Type: ${message.type}, Timestamp: ${message.timestamp}`,
         })),
       };
     } catch (error: any) {
