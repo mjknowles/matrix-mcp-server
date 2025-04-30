@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import * as sdk from "matrix-js-sdk";
-import { MatrixClient } from "matrix-js-sdk";
+import { EventType, MatrixClient } from "matrix-js-sdk";
 import { z } from "zod";
 
 const server = new McpServer(
@@ -134,13 +134,18 @@ server.tool(
         throw new Error(`Room with ID ${roomId} not found.`);
       }
 
-      const messages = room.timeline.slice(-limit).map((event) => ({
-        event_id: event.getId(),
-        sender: event.getSender(),
-        type: event.getType(),
-        content: event.getContent(),
-        timestamp: event.getTs(),
-      }));
+      const messages = room
+        .getLiveTimeline()
+        .getEvents()
+        .filter((event) => event.getType() === EventType.RoomMessage)
+        .slice(-limit)
+        .map((event) => ({
+          event_id: event.getId(),
+          sender: event.getSender(),
+          type: event.getType(),
+          content: event.getContent()?.body,
+          timestamp: event.getTs(),
+        }));
 
       return {
         content: messages.map((message) => ({
@@ -195,6 +200,131 @@ server.tool(
     }
   }
 );
+
+server.tool(
+  "get-messages-by-date",
+  {
+    roomId: z.string(),
+    startDate: z.string(),
+    endDate: z.string(),
+  },
+  async ({ roomId, startDate, endDate }) => {
+    if (!matrixClientInstance) {
+      throw new Error("Not connected to Matrix. Use connect-matrix first.");
+    }
+
+    try {
+      const room = matrixClientInstance.getRoom(roomId);
+      if (!room) {
+        throw new Error(`Room with ID ${roomId} not found.`);
+      }
+
+      const start = new Date(startDate).getTime();
+      const end = new Date(endDate).getTime();
+
+      const messages = room
+        .getLiveTimeline()
+        .getEvents()
+        .filter((event) => {
+          const timestamp = event.getTs();
+          return (
+            event.getType() === EventType.RoomMessage &&
+            timestamp >= start &&
+            timestamp <= end
+          );
+        });
+
+      return {
+        content: messages.map((event) => ({
+          type: "text",
+          text: `Content: ${
+            event.getContent().body
+          }, Event ID: ${event.getId()}, Sender: ${event.getSender()}, Timestamp: ${event.getTs()}`,
+        })),
+      };
+    } catch (error: any) {
+      server.server.sendLoggingMessage({
+        level: "error",
+        data: `Failed to filter messages by date: ${error.message}`,
+      });
+      throw error;
+    }
+  }
+);
+
+// Fixed: Ensure `sender` is defined in `identify-active-users`
+server.tool(
+  "identify-active-users",
+  {
+    roomId: z.string(),
+    limit: z.number().optional().default(10),
+  },
+  async ({ roomId, limit }) => {
+    if (!matrixClientInstance) {
+      throw new Error("Not connected to Matrix. Use connect-matrix first.");
+    }
+
+    try {
+      const room = matrixClientInstance.getRoom(roomId);
+      if (!room) {
+        throw new Error(`Room with ID ${roomId} not found.`);
+      }
+
+      const userMessageCounts: Record<string, number> = {};
+      room
+        .getLiveTimeline()
+        .getEvents()
+        .filter((event) => event.getType() === EventType.RoomMessage)
+        .forEach((event) => {
+          const sender = event.getSender();
+          if (sender) {
+            userMessageCounts[sender] = (userMessageCounts[sender] || 0) + 1;
+          }
+        });
+
+      const activeUsers = Object.entries(userMessageCounts)
+        .sort(([, countA], [, countB]) => countB - countA)
+        .slice(0, limit)
+        .map(([userId, count]) => ({ userId, count }));
+
+      return {
+        content: activeUsers.map((user) => ({
+          type: "text",
+          text: `User ID: ${user.userId}, Message Count: ${user.count}`,
+        })),
+      };
+    } catch (error: any) {
+      server.server.sendLoggingMessage({
+        level: "error",
+        data: `Failed to identify active users: ${error.message}`,
+      });
+      throw error;
+    }
+  }
+);
+
+// Tool: Get all users
+server.tool("get-all-users", {}, async () => {
+  if (!matrixClientInstance) {
+    throw new Error("Not connected to Matrix. Use connect-matrix first.");
+  }
+
+  try {
+    const users = matrixClientInstance.getUsers();
+    return {
+      content: users.map((user) => ({
+        type: "text",
+        text: `User ID: ${user.userId}, Display Name: ${user.displayName}}`,
+      })),
+    };
+  } catch (error: any) {
+    server.server.sendLoggingMessage({
+      level: "error",
+      data: `Failed to get all users: ${error.message}`,
+    });
+    throw error;
+  }
+});
 
 // Start the MCP server using StdioServerTransport
 const transport = new StdioServerTransport();
