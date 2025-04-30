@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import * as sdk from "matrix-js-sdk";
 import { MatrixClient } from "matrix-js-sdk";
 import { z } from "zod";
 
@@ -23,13 +24,11 @@ let matrixClientInstance: MatrixClient | null = null;
 server.tool(
   "connect-matrix",
   {
-    homeserverUrl: z.string(),
-    userId: z.string().nullable(),
-    token: z.string().nullable(),
-    username: z.string().nullable(),
-    password: z.string().nullable(),
+    homeserverUrl: z.string().default("http://localhost:8008"),
+    username: z.string().default("user1"),
+    password: z.string().default("i_love_matrix"),
   },
-  async ({ homeserverUrl, userId, token, username, password }) => {
+  async ({ homeserverUrl, username, password }) => {
     if (matrixClientInstance) {
       server.server.sendLoggingMessage({
         level: "warning",
@@ -40,22 +39,12 @@ server.tool(
     }
 
     try {
-      if (token && userId) {
-        server.server.sendLoggingMessage({
-          level: "info",
-          data: "Initializing MatrixClient with token...",
-        });
-        matrixClientInstance = new MatrixClient({
-          baseUrl: homeserverUrl,
-          accessToken: token,
-          userId,
-        });
-      } else if (username && password) {
+      if (username && password) {
         server.server.sendLoggingMessage({
           level: "info",
           data: "Initializing MatrixClient with username and password...",
         });
-        matrixClientInstance = new MatrixClient({
+        matrixClientInstance = sdk.createClient({
           baseUrl: homeserverUrl,
         });
         const loginResp = await matrixClientInstance.loginRequest({
@@ -63,7 +52,7 @@ server.tool(
           password,
           type: "m.login.password",
         });
-        matrixClientInstance = new MatrixClient({
+        matrixClientInstance = sdk.createClient({
           baseUrl: homeserverUrl,
           accessToken: loginResp.access_token,
           userId: loginResp.user_id,
