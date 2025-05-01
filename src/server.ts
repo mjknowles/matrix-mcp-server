@@ -116,6 +116,7 @@ server.tool("list-joined-rooms", {}, async () => {
     throw error;
   }
 });
+
 // Tool: Get room messages
 server.tool(
   "get-room-messages",
@@ -134,24 +135,16 @@ server.tool(
         throw new Error(`Room with ID ${roomId} not found.`);
       }
 
-      const messages = room
-        .getLiveTimeline()
-        .getEvents()
-        .filter((event) => event.getType() === EventType.RoomMessage)
-        .slice(-limit)
-        .map((event) => ({
-          event_id: event.getId(),
-          sender: event.getSender(),
-          type: event.getType(),
-          content: event.getContent()?.body,
-          timestamp: event.getTs(),
-        }));
+      const messages = await Promise.all(
+        room
+          .getLiveTimeline()
+          .getEvents()
+          .slice(-limit)
+          .map((event) => processMessage(event, matrixClientInstance))
+      );
 
       return {
-        content: messages.map((message) => ({
-          type: "text",
-          text: `Content: ${message.content}, Event ID: ${message.event_id}, Sender: ${message.sender}, Type: ${message.type}, Timestamp: ${message.timestamp}`,
-        })),
+        content: messages.filter((message) => message !== null),
       };
     } catch (error: any) {
       server.server.sendLoggingMessage({
@@ -222,25 +215,19 @@ server.tool(
       const start = new Date(startDate).getTime();
       const end = new Date(endDate).getTime();
 
-      const messages = room
-        .getLiveTimeline()
-        .getEvents()
-        .filter((event) => {
-          const timestamp = event.getTs();
-          return (
-            event.getType() === EventType.RoomMessage &&
-            timestamp >= start &&
-            timestamp <= end
-          );
-        });
+      const messages = await Promise.all(
+        room
+          .getLiveTimeline()
+          .getEvents()
+          .filter((event) => {
+            const timestamp = event.getTs();
+            return timestamp >= start && timestamp <= end;
+          })
+          .map((event) => processMessage(event, matrixClientInstance))
+      );
 
       return {
-        content: messages.map((event) => ({
-          type: "text",
-          text: `Content: ${
-            event.getContent().body
-          }, Event ID: ${event.getId()}, Sender: ${event.getSender()}, Timestamp: ${event.getTs()}`,
-        })),
+        content: messages.filter((message) => message !== null),
       };
     } catch (error: any) {
       server.server.sendLoggingMessage({
@@ -329,3 +316,51 @@ server.tool("get-all-users", {}, async () => {
 // Start the MCP server using StdioServerTransport
 const transport = new StdioServerTransport();
 await server.connect(transport);
+
+// Define the return type for processMessage
+type ProcessedMessage =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string };
+
+// Helper function to process messages
+async function processMessage(
+  event: sdk.MatrixEvent,
+  matrixClient: MatrixClient | null
+): Promise<ProcessedMessage | null> {
+  if (!matrixClient) {
+    throw new Error("Matrix client is not initialized.");
+  }
+  const content = event.getContent();
+  if (event.getType() === EventType.RoomMessage && content) {
+    if (content.msgtype === "m.text") {
+      return {
+        type: "text",
+        text: String(content.body || ""),
+      };
+    } else if (content.msgtype === "m.image" && content.url) {
+      try {
+        const httpUrl = String(matrixClient.mxcUrlToHttp(content.url) || "");
+        const response = await fetch(httpUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.statusText}`);
+        }
+        const buffer = await response.arrayBuffer();
+        const base64Data = Buffer.from(buffer).toString("base64");
+        return {
+          type: "image",
+          data: base64Data,
+          mimeType: String(
+            content.info?.mimetype || "application/octet-stream"
+          ),
+        };
+      } catch (error: any) {
+        server.server.sendLoggingMessage({
+          level: "error",
+          data: `Failed to fetch image content: ${error.message}`,
+        });
+        return null;
+      }
+    }
+  }
+  return null;
+}
