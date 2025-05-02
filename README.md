@@ -24,36 +24,21 @@
    npm install
    ```
 
-3. **Run the Server**
-
-   Start the MCP server in development mode:
-
-   ```bash
-   npm run dev
-   ```
-
-   To build and run the server in production mode:
+3. **Build the Server**
 
    ```bash
    npm run build
-   npm start
    ```
 
-   By default, the server will run on `http://localhost:3000`.
+4. **Test the Server**
 
-## Test the Server
+Run Inspector to test the server. Make sure you get an access token via the `connect-matrix` tool first.
 
-You can test the server using tools like Postman or curl. For example, to connect to a Matrix homeserver, send a POST request to `/connect-matrix` with the following JSON payload:
-
-```json
-{
-  "homeserverUrl": "https://matrix.org",
-  "username": "your-username",
-  "password": "your-password"
-}
+```bash
+npx @modelcontextprotocol/inspector node dist/server.js
 ```
 
-### Add to VSCode
+## Add to VSCode
 
 ```
 {

@@ -18,8 +18,6 @@ const server = new McpServer(
   }
 );
 
-let matrixClientInstance: MatrixClient | null = null;
-
 // Tool: Connect to Matrix homeserver
 server.tool(
   "connect-matrix",
@@ -29,49 +27,24 @@ server.tool(
     password: z.string().default("i_love_matrix"),
   },
   async ({ homeserverUrl, username, password }) => {
-    if (matrixClientInstance) {
-      server.server.sendLoggingMessage({
-        level: "warning",
-        data: "Matrix client already connected. Reconnecting.",
-      });
-      matrixClientInstance.stopClient();
-      matrixClientInstance = null;
-    }
-
     try {
-      if (username && password) {
-        server.server.sendLoggingMessage({
-          level: "info",
-          data: "Initializing MatrixClient with username and password...",
-        });
-        matrixClientInstance = sdk.createClient({
-          baseUrl: homeserverUrl,
-        });
-        const loginResp = await matrixClientInstance.loginRequest({
-          user: username,
-          password,
-          type: "m.login.password",
-        });
-        matrixClientInstance = sdk.createClient({
-          baseUrl: homeserverUrl,
-          accessToken: loginResp.access_token,
-          userId: loginResp.user_id,
-        });
-      } else {
-        throw new Error(
-          "Insufficient details. Provide either token or username/password."
-        );
-      }
+      server.server.sendLoggingMessage({
+        level: "info",
+        data: "Initializing MatrixClient with username and password...",
+      });
+
+      const tempClient = sdk.createClient({ baseUrl: homeserverUrl });
+      const loginResp = await tempClient.loginRequest({
+        user: username,
+        password,
+        type: "m.login.password",
+      });
 
       server.server.sendLoggingMessage({
         level: "info",
-        data: "Starting Matrix client...",
+        data: "Matrix client connected successfully.",
       });
-      await matrixClientInstance.startClient({ initialSyncLimit: 10 });
-      server.server.sendLoggingMessage({
-        level: "info",
-        data: "Matrix client started successfully.",
-      });
+
       return {
         content: [
           {
@@ -79,6 +52,7 @@ server.tool(
             text: `Connected to ${homeserverUrl}`,
           },
         ],
+        accessToken: loginResp.access_token,
       };
     } catch (error: any) {
       server.server.sendLoggingMessage({
@@ -91,46 +65,51 @@ server.tool(
 );
 
 // Tool: List joined rooms
-server.tool("list-joined-rooms", {}, async () => {
-  if (!matrixClientInstance) {
-    throw new Error("Not connected to Matrix. Use connect-matrix first.");
-  }
+server.tool(
+  "list-joined-rooms",
+  {
+    homeserverUrl: z.string(),
+    accessToken: z.string(),
+  },
+  async ({ homeserverUrl, accessToken }) => {
+    const client = createMatrixClient(homeserverUrl, accessToken);
 
-  try {
-    const rooms = matrixClientInstance.getRooms();
-    server.server.sendLoggingMessage({
-      level: "info",
-      data: `Room count: ${rooms.length}`,
-    });
-    return {
-      content: rooms.map((room) => ({
-        type: "text",
-        text: `Room ID: ${room.roomId}, Name: ${room.name}`,
-      })),
-    };
-  } catch (error: any) {
-    server.server.sendLoggingMessage({
-      level: "error",
-      data: `Failed to list joined rooms: ${error.message}`,
-    });
-    throw error;
+    try {
+      const rooms = client.getRooms();
+      server.server.sendLoggingMessage({
+        level: "info",
+        data: `Room count: ${rooms.length}`,
+      });
+      return {
+        content: rooms.map((room) => ({
+          type: "text",
+          text: `Room ID: ${room.roomId}, Name: ${room.name}`,
+        })),
+      };
+    } catch (error: any) {
+      server.server.sendLoggingMessage({
+        level: "error",
+        data: `Failed to list joined rooms: ${error.message}`,
+      });
+      throw error;
+    }
   }
-});
+);
 
 // Tool: Get room messages
 server.tool(
   "get-room-messages",
   {
+    homeserverUrl: z.string(),
+    accessToken: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(20),
   },
-  async ({ roomId, limit }) => {
-    if (!matrixClientInstance) {
-      throw new Error("Not connected to Matrix. Use connect-matrix first.");
-    }
+  async ({ homeserverUrl, accessToken, roomId, limit }) => {
+    const client = createMatrixClient(homeserverUrl, accessToken);
 
     try {
-      const room = matrixClientInstance.getRoom(roomId);
+      const room = client.getRoom(roomId);
       if (!room) {
         throw new Error(`Room with ID ${roomId} not found.`);
       }
@@ -140,7 +119,7 @@ server.tool(
           .getLiveTimeline()
           .getEvents()
           .slice(-limit)
-          .map((event) => processMessage(event, matrixClientInstance))
+          .map((event) => processMessage(event, client))
       );
 
       return {
@@ -160,15 +139,15 @@ server.tool(
 server.tool(
   "get-room-members",
   {
+    homeserverUrl: z.string(),
+    accessToken: z.string(),
     roomId: z.string(),
   },
-  async ({ roomId }) => {
-    if (!matrixClientInstance) {
-      throw new Error("Not connected to Matrix. Use connect-matrix first.");
-    }
+  async ({ homeserverUrl, accessToken, roomId }) => {
+    const client = createMatrixClient(homeserverUrl, accessToken);
 
     try {
-      const room = matrixClientInstance.getRoom(roomId);
+      const room = client.getRoom(roomId);
       if (!room) {
         throw new Error(`Room with ID ${roomId} not found.`);
       }
@@ -194,20 +173,21 @@ server.tool(
   }
 );
 
+// Tool: Get messages by date
 server.tool(
   "get-messages-by-date",
   {
+    homeserverUrl: z.string(),
+    accessToken: z.string(),
     roomId: z.string(),
     startDate: z.string(),
     endDate: z.string(),
   },
-  async ({ roomId, startDate, endDate }) => {
-    if (!matrixClientInstance) {
-      throw new Error("Not connected to Matrix. Use connect-matrix first.");
-    }
+  async ({ homeserverUrl, accessToken, roomId, startDate, endDate }) => {
+    const client = createMatrixClient(homeserverUrl, accessToken);
 
     try {
-      const room = matrixClientInstance.getRoom(roomId);
+      const room = client.getRoom(roomId);
       if (!room) {
         throw new Error(`Room with ID ${roomId} not found.`);
       }
@@ -223,7 +203,7 @@ server.tool(
             const timestamp = event.getTs();
             return timestamp >= start && timestamp <= end;
           })
-          .map((event) => processMessage(event, matrixClientInstance))
+          .map((event) => processMessage(event, client))
       );
 
       return {
@@ -239,20 +219,20 @@ server.tool(
   }
 );
 
-// Fixed: Ensure `sender` is defined in `identify-active-users`
+// Tool: Identify active users
 server.tool(
   "identify-active-users",
   {
+    homeserverUrl: z.string(),
+    accessToken: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(10),
   },
-  async ({ roomId, limit }) => {
-    if (!matrixClientInstance) {
-      throw new Error("Not connected to Matrix. Use connect-matrix first.");
-    }
+  async ({ homeserverUrl, accessToken, roomId, limit }) => {
+    const client = createMatrixClient(homeserverUrl, accessToken);
 
     try {
-      const room = matrixClientInstance.getRoom(roomId);
+      const room = client.getRoom(roomId);
       if (!room) {
         throw new Error(`Room with ID ${roomId} not found.`);
       }
@@ -291,27 +271,32 @@ server.tool(
 );
 
 // Tool: Get all users
-server.tool("get-all-users", {}, async () => {
-  if (!matrixClientInstance) {
-    throw new Error("Not connected to Matrix. Use connect-matrix first.");
-  }
+server.tool(
+  "get-all-users",
+  {
+    homeserverUrl: z.string(),
+    accessToken: z.string(),
+  },
+  async ({ homeserverUrl, accessToken }) => {
+    const client = createMatrixClient(homeserverUrl, accessToken);
 
-  try {
-    const users = matrixClientInstance.getUsers();
-    return {
-      content: users.map((user) => ({
-        type: "text",
-        text: `User ID: ${user.userId}, Display Name: ${user.displayName}}`,
-      })),
-    };
-  } catch (error: any) {
-    server.server.sendLoggingMessage({
-      level: "error",
-      data: `Failed to get all users: ${error.message}`,
-    });
-    throw error;
+    try {
+      const users = client.getUsers();
+      return {
+        content: users.map((user) => ({
+          type: "text",
+          text: `User ID: ${user.userId}, Display Name: ${user.displayName}}`,
+        })),
+      };
+    } catch (error: any) {
+      server.server.sendLoggingMessage({
+        level: "error",
+        data: `Failed to get all users: ${error.message}`,
+      });
+      throw error;
+    }
   }
-});
+);
 
 // Start the MCP server using StdioServerTransport
 const transport = new StdioServerTransport();
@@ -363,4 +348,15 @@ async function processMessage(
     }
   }
   return null;
+}
+
+// Private method to create a Matrix client instance
+function createMatrixClient(
+  homeserverUrl: string,
+  accessToken: string
+): MatrixClient {
+  return sdk.createClient({
+    baseUrl: homeserverUrl,
+    accessToken,
+  });
 }
