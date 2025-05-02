@@ -2,28 +2,32 @@
   "name": "matrix-mcp-server",
   "version": "1.0.0",
   "description": "MCP server that fronts a Matrix homeserver",
-  "main": "dist/server.js",
+  "main": "dist/http-server.js",
   "type": "module",
   "scripts": {
-    "start": "node dist/server.js",
+    "start": "node dist/http-server.js",
     "build": "tsc",
-    "dev": "ts-node-dev src/server.ts",
+    "dev": "NODE_OPTIONS=--no-warnings tsx watch src/http-server.ts",
     "lint": "eslint .",
     "test": "jest"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",
+    "express": "^5.1.0",
     "matrix-js-sdk": "^37.4.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.1",
     "@types/node": "^22.15.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "eslint": "^9.25.1",
     "jest": "^29.7.0",
     "ts-jest": "^29.3.2",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "tsx": "^4.19.4"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -1,5 +1,4 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import * as sdk from "matrix-js-sdk";
 import { EventType, MatrixClient } from "matrix-js-sdk";
 import { z } from "zod";
@@ -28,10 +27,7 @@ server.tool(
   },
   async ({ homeserverUrl, username, password }) => {
     try {
-      server.server.sendLoggingMessage({
-        level: "info",
-        data: "Initializing MatrixClient with username and password...",
-      });
+      console.log("Initializing MatrixClient with username and password...");
 
       const tempClient = sdk.createClient({ baseUrl: homeserverUrl });
       const loginResp = await tempClient.loginRequest({
@@ -40,25 +36,24 @@ server.tool(
         type: "m.login.password",
       });
 
-      server.server.sendLoggingMessage({
-        level: "info",
-        data: "Matrix client connected successfully.",
-      });
-
+      console.log("Matrix client connected successfully.");
+      const data = {
+        access_token: loginResp.access_token,
+        user_id: loginResp.user_id,
+        device_id: loginResp.device_id,
+        message: "Login successful",
+      };
       return {
         content: [
           {
             type: "text",
-            text: `Connected to ${homeserverUrl}`,
+            text: JSON.stringify(data),
           },
         ],
         accessToken: loginResp.access_token,
       };
     } catch (error: any) {
-      server.server.sendLoggingMessage({
-        level: "error",
-        data: `Failed to connect to Matrix: ${error.message}`,
-      });
+      console.error(`Failed to connect to Matrix: ${error.message}`);
       throw error;
     }
   }
@@ -72,14 +67,11 @@ server.tool(
     accessToken: z.string(),
   },
   async ({ homeserverUrl, accessToken }) => {
-    const client = createMatrixClient(homeserverUrl, accessToken);
+    const client = await createMatrixClient(homeserverUrl, accessToken);
 
     try {
       const rooms = client.getRooms();
-      server.server.sendLoggingMessage({
-        level: "info",
-        data: `Room count: ${rooms.length}`,
-      });
+      console.log(`Room count: ${rooms.length}`);
       return {
         content: rooms.map((room) => ({
           type: "text",
@@ -87,10 +79,7 @@ server.tool(
         })),
       };
     } catch (error: any) {
-      server.server.sendLoggingMessage({
-        level: "error",
-        data: `Failed to list joined rooms: ${error.message}`,
-      });
+      console.error(`Failed to list joined rooms: ${error.message}`);
       throw error;
     }
   }
@@ -106,7 +95,7 @@ server.tool(
     limit: z.number().optional().default(20),
   },
   async ({ homeserverUrl, accessToken, roomId, limit }) => {
-    const client = createMatrixClient(homeserverUrl, accessToken);
+    const client = await createMatrixClient(homeserverUrl, accessToken);
 
     try {
       const room = client.getRoom(roomId);
@@ -126,10 +115,7 @@ server.tool(
         content: messages.filter((message) => message !== null),
       };
     } catch (error: any) {
-      server.server.sendLoggingMessage({
-        level: "error",
-        data: `Failed to get room messages: ${error.message}`,
-      });
+      console.error(`Failed to get room messages: ${error.message}`);
       throw error;
     }
   }
@@ -144,7 +130,7 @@ server.tool(
     roomId: z.string(),
   },
   async ({ homeserverUrl, accessToken, roomId }) => {
-    const client = createMatrixClient(homeserverUrl, accessToken);
+    const client = await createMatrixClient(homeserverUrl, accessToken);
 
     try {
       const room = client.getRoom(roomId);
@@ -164,10 +150,7 @@ server.tool(
         })),
       };
     } catch (error: any) {
-      server.server.sendLoggingMessage({
-        level: "error",
-        data: `Failed to get room members: ${error.message}`,
-      });
+      console.error(`Failed to get room members: ${error.message}`);
       throw error;
     }
   }
@@ -184,7 +167,7 @@ server.tool(
     endDate: z.string(),
   },
   async ({ homeserverUrl, accessToken, roomId, startDate, endDate }) => {
-    const client = createMatrixClient(homeserverUrl, accessToken);
+    const client = await createMatrixClient(homeserverUrl, accessToken);
 
     try {
       const room = client.getRoom(roomId);
@@ -210,10 +193,7 @@ server.tool(
         content: messages.filter((message) => message !== null),
       };
     } catch (error: any) {
-      server.server.sendLoggingMessage({
-        level: "error",
-        data: `Failed to filter messages by date: ${error.message}`,
-      });
+      console.error(`Failed to filter messages by date: ${error.message}`);
       throw error;
     }
   }
@@ -229,7 +209,7 @@ server.tool(
     limit: z.number().optional().default(10),
   },
   async ({ homeserverUrl, accessToken, roomId, limit }) => {
-    const client = createMatrixClient(homeserverUrl, accessToken);
+    const client = await createMatrixClient(homeserverUrl, accessToken);
 
     try {
       const room = client.getRoom(roomId);
@@ -261,10 +241,7 @@ server.tool(
         })),
       };
     } catch (error: any) {
-      server.server.sendLoggingMessage({
-        level: "error",
-        data: `Failed to identify active users: ${error.message}`,
-      });
+      console.error(`Failed to identify active users: ${error.message}`);
       throw error;
     }
   }
@@ -278,7 +255,7 @@ server.tool(
     accessToken: z.string(),
   },
   async ({ homeserverUrl, accessToken }) => {
-    const client = createMatrixClient(homeserverUrl, accessToken);
+    const client = await createMatrixClient(homeserverUrl, accessToken);
 
     try {
       const users = client.getUsers();
@@ -289,10 +266,7 @@ server.tool(
         })),
       };
     } catch (error: any) {
-      server.server.sendLoggingMessage({
-        level: "error",
-        data: `Failed to get all users: ${error.message}`,
-      });
+      console.error(`Failed to get all users: ${error.message}`);
       throw error;
     }
   }
@@ -335,10 +309,7 @@ async function processMessage(
           ),
         };
       } catch (error: any) {
-        server.server.sendLoggingMessage({
-          level: "error",
-          data: `Failed to fetch image content: ${error.message}`,
-        });
+        console.error(`Failed to fetch image content: ${error.message}`);
         return null;
       }
     }
@@ -347,14 +318,16 @@ async function processMessage(
 }
 
 // Private method to create a Matrix client instance
-function createMatrixClient(
+async function createMatrixClient(
   homeserverUrl: string,
   accessToken: string
-): MatrixClient {
-  return sdk.createClient({
+): Promise<MatrixClient> {
+  const client = sdk.createClient({
     baseUrl: homeserverUrl,
     accessToken,
   });
+  await client.startClient({ initialSyncLimit: 100 });
+  return client;
 }
 
 export default server;
