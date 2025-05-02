@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import * as sdk from "matrix-js-sdk";
 import { EventType, MatrixClient } from "matrix-js-sdk";
 import { z } from "zod";
@@ -298,10 +298,6 @@ server.tool(
   }
 );
 
-// Start the MCP server using StdioServerTransport
-const transport = new StdioServerTransport();
-await server.connect(transport);
-
 // Define the return type for processMessage
 type ProcessedMessage =
   | { type: "text"; text: string }
@@ -360,3 +356,5 @@ function createMatrixClient(
     accessToken,
   });
 }
+
+export default server;

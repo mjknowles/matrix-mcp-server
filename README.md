@@ -35,7 +35,8 @@
 Run Inspector to test the server. Make sure you get an access token via the `connect-matrix` tool first.
 
 ```bash
-npx @modelcontextprotocol/inspector node dist/server.js
+npm run dev
+npx @modelcontextprotocol/inspector
 ```
 
 ## Add to VSCode
