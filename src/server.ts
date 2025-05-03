@@ -50,7 +50,6 @@ server.tool(
             text: JSON.stringify(data),
           },
         ],
-        accessToken: loginResp.access_token,
       };
     } catch (error: any) {
       console.error(`Failed to connect to Matrix: ${error.message}`);
@@ -65,9 +64,14 @@ server.tool(
   {
     homeserverUrl: z.string(),
     accessToken: z.string(),
+    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken }) => {
-    const client = await createMatrixClient(homeserverUrl, accessToken);
+  async ({ homeserverUrl, accessToken, user_id }) => {
+    const client = await createMatrixClient(
+      homeserverUrl,
+      accessToken,
+      user_id
+    );
 
     try {
       const rooms = client.getRooms();
@@ -93,9 +97,14 @@ server.tool(
     accessToken: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(20),
+    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken, roomId, limit }) => {
-    const client = await createMatrixClient(homeserverUrl, accessToken);
+  async ({ homeserverUrl, accessToken, roomId, limit, user_id }) => {
+    const client = await createMatrixClient(
+      homeserverUrl,
+      accessToken,
+      user_id
+    );
 
     try {
       const room = client.getRoom(roomId);
@@ -128,9 +137,14 @@ server.tool(
     homeserverUrl: z.string(),
     accessToken: z.string(),
     roomId: z.string(),
+    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken, roomId }) => {
-    const client = await createMatrixClient(homeserverUrl, accessToken);
+  async ({ homeserverUrl, accessToken, roomId, user_id }) => {
+    const client = await createMatrixClient(
+      homeserverUrl,
+      accessToken,
+      user_id
+    );
 
     try {
       const room = client.getRoom(roomId);
@@ -165,9 +179,21 @@ server.tool(
     roomId: z.string(),
     startDate: z.string(),
     endDate: z.string(),
+    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken, roomId, startDate, endDate }) => {
-    const client = await createMatrixClient(homeserverUrl, accessToken);
+  async ({
+    homeserverUrl,
+    accessToken,
+    roomId,
+    startDate,
+    endDate,
+    user_id,
+  }) => {
+    const client = await createMatrixClient(
+      homeserverUrl,
+      accessToken,
+      user_id
+    );
 
     try {
       const room = client.getRoom(roomId);
@@ -207,9 +233,14 @@ server.tool(
     accessToken: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(10),
+    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken, roomId, limit }) => {
-    const client = await createMatrixClient(homeserverUrl, accessToken);
+  async ({ homeserverUrl, accessToken, roomId, limit, user_id }) => {
+    const client = await createMatrixClient(
+      homeserverUrl,
+      accessToken,
+      user_id
+    );
 
     try {
       const room = client.getRoom(roomId);
@@ -253,9 +284,14 @@ server.tool(
   {
     homeserverUrl: z.string(),
     accessToken: z.string(),
+    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken }) => {
-    const client = await createMatrixClient(homeserverUrl, accessToken);
+  async ({ homeserverUrl, accessToken, user_id }) => {
+    const client = await createMatrixClient(
+      homeserverUrl,
+      accessToken,
+      user_id
+    );
 
     try {
       const users = client.getUsers();
@@ -320,11 +356,13 @@ async function processMessage(
 // Private method to create a Matrix client instance
 async function createMatrixClient(
   homeserverUrl: string,
-  accessToken: string
+  accessToken: string,
+  userId: string
 ): Promise<MatrixClient> {
   const client = sdk.createClient({
     baseUrl: homeserverUrl,
     accessToken,
+    userId,
   });
   await client.startClient({ initialSyncLimit: 100 });
   return client;
