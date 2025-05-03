@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as sdk from "matrix-js-sdk";
 import { EventType, MatrixClient } from "matrix-js-sdk";
+import { EventEmitter } from "stream";
 import { z } from "zod";
 
 const server = new McpServer(
@@ -85,6 +86,9 @@ server.tool(
     } catch (error: any) {
       console.error(`Failed to list joined rooms: ${error.message}`);
       throw error;
+    } finally {
+      // Stop the client to prevent further syncing
+      client.stopClient();
     }
   }
 );
@@ -126,6 +130,8 @@ server.tool(
     } catch (error: any) {
       console.error(`Failed to get room messages: ${error.message}`);
       throw error;
+    } finally {
+      client.stopClient();
     }
   }
 );
@@ -166,6 +172,8 @@ server.tool(
     } catch (error: any) {
       console.error(`Failed to get room members: ${error.message}`);
       throw error;
+    } finally {
+      client.stopClient();
     }
   }
 );
@@ -221,6 +229,8 @@ server.tool(
     } catch (error: any) {
       console.error(`Failed to filter messages by date: ${error.message}`);
       throw error;
+    } finally {
+      client.stopClient();
     }
   }
 );
@@ -274,6 +284,8 @@ server.tool(
     } catch (error: any) {
       console.error(`Failed to identify active users: ${error.message}`);
       throw error;
+    } finally {
+      client.stopClient();
     }
   }
 );
@@ -304,6 +316,8 @@ server.tool(
     } catch (error: any) {
       console.error(`Failed to get all users: ${error.message}`);
       throw error;
+    } finally {
+      client.stopClient();
     }
   }
 );
@@ -365,6 +379,13 @@ async function createMatrixClient(
     userId,
   });
   await client.startClient({ initialSyncLimit: 100 });
+  // Wait for the initial sync to complete
+  await new Promise<void>((resolve, reject) => {
+    client.once(sdk.ClientEvent.Sync, (state) => {
+      if (state === "PREPARED") resolve();
+      else reject(new Error(`Sync failed with state: ${state}`));
+    });
+  });
   return client;
 }
 
