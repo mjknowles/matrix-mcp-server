@@ -41,15 +41,13 @@ npx @modelcontextprotocol/inspector
 
 ## Add to VSCode
 
+In mcp.json:
+
 ```
 {
   "servers": {
     "matrix-mcp": {
-      "type": "stdio",
-      "command": "<full-path-to>/node",
-      "args": [
-        "<full-path-to>/matrix-mcp-server/dist/server.js"
-      ]
+      "url": "http://localhost:3000/mcp"
     }
   }
 }

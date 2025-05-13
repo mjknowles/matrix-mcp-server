@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import * as sdk from "matrix-js-sdk";
 import { EventType, MatrixClient } from "matrix-js-sdk";
-import { EventEmitter } from "stream";
 import { z } from "zod";
 
 const server = new McpServer(
@@ -18,61 +18,45 @@ const server = new McpServer(
   }
 );
 
-// Tool: Connect to Matrix homeserver
-server.tool(
-  "connect-matrix",
-  {
-    homeserverUrl: z.string().default("http://localhost:8008"),
-    username: z.string().default("user1"),
-    password: z.string().default("i_love_matrix"),
-  },
-  async ({ homeserverUrl, username, password }) => {
-    try {
-      console.log("Initializing MatrixClient with username and password...");
-
-      const tempClient = sdk.createClient({ baseUrl: homeserverUrl });
-      const loginResp = await tempClient.loginRequest({
-        user: username,
-        password,
-        type: "m.login.password",
-      });
-
-      console.log("Matrix client connected successfully.");
-      const data = {
-        access_token: loginResp.access_token,
-        user_id: loginResp.user_id,
-        device_id: loginResp.device_id,
-        message: "Login successful",
-      };
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(data),
-          },
-        ],
-      };
-    } catch (error: any) {
-      console.error(`Failed to connect to Matrix: ${error.message}`);
-      throw error;
-    }
-  }
-);
+// Helper function to connect to Matrix homeserver
+async function connectMatrix(
+  homeserverUrl: string,
+  username: string,
+  password: string
+) {
+  console.log("Initializing MatrixClient with username and password...");
+  const tempClient = sdk.createClient({ baseUrl: homeserverUrl });
+  const loginResp = await tempClient.loginRequest({
+    user: username,
+    password,
+    type: "m.login.password",
+  });
+  console.log("Matrix client connected successfully.");
+  return {
+    accessToken: loginResp.access_token,
+    userId: loginResp.user_id,
+    deviceId: loginResp.device_id,
+  };
+}
 
 // Tool: List joined rooms
 server.tool(
   "list-joined-rooms",
   {
     homeserverUrl: z.string(),
-    accessToken: z.string(),
-    user_id: z.string(),
+    homeserverUsername: z.string(),
+    homeserverPassword: z.string(),
   },
-  async ({ homeserverUrl, accessToken, user_id }) => {
-    const client = await createMatrixClient(
+  async (
+    { homeserverUrl, homeserverUsername, homeserverPassword },
+    extra
+  ): Promise<CallToolResult> => {
+    const { accessToken, userId } = await connectMatrix(
       homeserverUrl,
-      accessToken,
-      user_id
+      homeserverUsername,
+      homeserverPassword
     );
+    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const rooms = client.getRooms();
@@ -87,7 +71,6 @@ server.tool(
       console.error(`Failed to list joined rooms: ${error.message}`);
       throw error;
     } finally {
-      // Stop the client to prevent further syncing
       client.stopClient();
     }
   }
@@ -98,17 +81,24 @@ server.tool(
   "get-room-messages",
   {
     homeserverUrl: z.string(),
-    accessToken: z.string(),
+    homeserverUsername: z.string(),
+    homeserverPassword: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(20),
-    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken, roomId, limit, user_id }) => {
-    const client = await createMatrixClient(
+  async ({
+    homeserverUrl,
+    homeserverUsername,
+    homeserverPassword,
+    roomId,
+    limit,
+  }) => {
+    const { accessToken, userId } = await connectMatrix(
       homeserverUrl,
-      accessToken,
-      user_id
+      homeserverUsername,
+      homeserverPassword
     );
+    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const room = client.getRoom(roomId);
@@ -141,16 +131,17 @@ server.tool(
   "get-room-members",
   {
     homeserverUrl: z.string(),
-    accessToken: z.string(),
+    homeserverUsername: z.string(),
+    homeserverPassword: z.string(),
     roomId: z.string(),
-    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken, roomId, user_id }) => {
-    const client = await createMatrixClient(
+  async ({ homeserverUrl, homeserverUsername, homeserverPassword, roomId }) => {
+    const { accessToken, userId } = await connectMatrix(
       homeserverUrl,
-      accessToken,
-      user_id
+      homeserverUsername,
+      homeserverPassword
     );
+    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const room = client.getRoom(roomId);
@@ -183,25 +174,26 @@ server.tool(
   "get-messages-by-date",
   {
     homeserverUrl: z.string(),
-    accessToken: z.string(),
+    homeserverUsername: z.string(),
+    homeserverPassword: z.string(),
     roomId: z.string(),
     startDate: z.string(),
     endDate: z.string(),
-    user_id: z.string(),
   },
   async ({
     homeserverUrl,
-    accessToken,
+    homeserverUsername,
+    homeserverPassword,
     roomId,
     startDate,
     endDate,
-    user_id,
   }) => {
-    const client = await createMatrixClient(
+    const { accessToken, userId } = await connectMatrix(
       homeserverUrl,
-      accessToken,
-      user_id
+      homeserverUsername,
+      homeserverPassword
     );
+    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const room = client.getRoom(roomId);
@@ -240,17 +232,24 @@ server.tool(
   "identify-active-users",
   {
     homeserverUrl: z.string(),
-    accessToken: z.string(),
+    homeserverUsername: z.string(),
+    homeserverPassword: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(10),
-    user_id: z.string(),
   },
-  async ({ homeserverUrl, accessToken, roomId, limit, user_id }) => {
-    const client = await createMatrixClient(
+  async ({
+    homeserverUrl,
+    homeserverUsername,
+    homeserverPassword,
+    roomId,
+    limit,
+  }) => {
+    const { accessToken, userId } = await connectMatrix(
       homeserverUrl,
-      accessToken,
-      user_id
+      homeserverUsername,
+      homeserverPassword
     );
+    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const room = client.getRoom(roomId);
@@ -295,15 +294,16 @@ server.tool(
   "get-all-users",
   {
     homeserverUrl: z.string(),
-    accessToken: z.string(),
-    user_id: z.string(),
+    homeserverUsername: z.string(),
+    homeserverPassword: z.string(),
   },
-  async ({ homeserverUrl, accessToken, user_id }) => {
-    const client = await createMatrixClient(
+  async ({ homeserverUrl, homeserverUsername, homeserverPassword }) => {
+    const { accessToken, userId } = await connectMatrix(
       homeserverUrl,
-      accessToken,
-      user_id
+      homeserverUsername,
+      homeserverPassword
     );
+    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const users = client.getUsers();
