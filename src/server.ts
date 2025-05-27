@@ -18,45 +18,18 @@ const server = new McpServer(
   }
 );
 
-// Helper function to connect to Matrix homeserver
-async function connectMatrix(
-  homeserverUrl: string,
-  username: string,
-  password: string
-) {
-  console.log("Initializing MatrixClient with username and password...");
-  const tempClient = sdk.createClient({ baseUrl: homeserverUrl });
-  const loginResp = await tempClient.loginRequest({
-    user: username,
-    password,
-    type: "m.login.password",
-  });
-  console.log("Matrix client connected successfully.");
-  return {
-    accessToken: loginResp.access_token,
-    userId: loginResp.user_id,
-    deviceId: loginResp.device_id,
-  };
-}
-
 // Tool: List joined rooms
 server.tool(
   "list-joined-rooms",
   {
     homeserverUrl: z.string(),
-    homeserverUsername: z.string(),
-    homeserverPassword: z.string(),
   },
-  async (
-    { homeserverUrl, homeserverUsername, homeserverPassword },
-    extra
-  ): Promise<CallToolResult> => {
-    const { accessToken, userId } = await connectMatrix(
+  async ({ homeserverUrl }, extra): Promise<CallToolResult> => {
+    const client = await createMatrixClient(
       homeserverUrl,
-      homeserverUsername,
-      homeserverPassword
+      extra.authInfo?.token,
+      extra.authInfo?.extra?.userId as string | undefined
     );
-    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const rooms = client.getRooms();
@@ -81,24 +54,15 @@ server.tool(
   "get-room-messages",
   {
     homeserverUrl: z.string(),
-    homeserverUsername: z.string(),
-    homeserverPassword: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(20),
   },
-  async ({
-    homeserverUrl,
-    homeserverUsername,
-    homeserverPassword,
-    roomId,
-    limit,
-  }) => {
-    const { accessToken, userId } = await connectMatrix(
+  async ({ homeserverUrl, roomId, limit }, extra) => {
+    const client = await createMatrixClient(
       homeserverUrl,
-      homeserverUsername,
-      homeserverPassword
+      extra.authInfo?.token,
+      extra.authInfo?.extra?.userId as string | undefined
     );
-    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const room = client.getRoom(roomId);
@@ -131,17 +95,14 @@ server.tool(
   "get-room-members",
   {
     homeserverUrl: z.string(),
-    homeserverUsername: z.string(),
-    homeserverPassword: z.string(),
     roomId: z.string(),
   },
-  async ({ homeserverUrl, homeserverUsername, homeserverPassword, roomId }) => {
-    const { accessToken, userId } = await connectMatrix(
+  async ({ homeserverUrl, roomId }, extra) => {
+    const client = await createMatrixClient(
       homeserverUrl,
-      homeserverUsername,
-      homeserverPassword
+      extra.authInfo?.token,
+      extra.authInfo?.extra?.userId as string | undefined
     );
-    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const room = client.getRoom(roomId);
@@ -174,26 +135,16 @@ server.tool(
   "get-messages-by-date",
   {
     homeserverUrl: z.string(),
-    homeserverUsername: z.string(),
-    homeserverPassword: z.string(),
     roomId: z.string(),
     startDate: z.string(),
     endDate: z.string(),
   },
-  async ({
-    homeserverUrl,
-    homeserverUsername,
-    homeserverPassword,
-    roomId,
-    startDate,
-    endDate,
-  }) => {
-    const { accessToken, userId } = await connectMatrix(
+  async ({ homeserverUrl, roomId, startDate, endDate }, extra) => {
+    const client = await createMatrixClient(
       homeserverUrl,
-      homeserverUsername,
-      homeserverPassword
+      extra.authInfo?.token,
+      extra.authInfo?.extra?.userId as string | undefined
     );
-    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const room = client.getRoom(roomId);
@@ -232,24 +183,15 @@ server.tool(
   "identify-active-users",
   {
     homeserverUrl: z.string(),
-    homeserverUsername: z.string(),
-    homeserverPassword: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(10),
   },
-  async ({
-    homeserverUrl,
-    homeserverUsername,
-    homeserverPassword,
-    roomId,
-    limit,
-  }) => {
-    const { accessToken, userId } = await connectMatrix(
+  async ({ homeserverUrl, roomId, limit }, extra) => {
+    const client = await createMatrixClient(
       homeserverUrl,
-      homeserverUsername,
-      homeserverPassword
+      extra.authInfo?.token,
+      extra.authInfo?.extra?.userId as string | undefined
     );
-    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const room = client.getRoom(roomId);
@@ -294,16 +236,13 @@ server.tool(
   "get-all-users",
   {
     homeserverUrl: z.string(),
-    homeserverUsername: z.string(),
-    homeserverPassword: z.string(),
   },
-  async ({ homeserverUrl, homeserverUsername, homeserverPassword }) => {
-    const { accessToken, userId } = await connectMatrix(
+  async ({ homeserverUrl }, extra) => {
+    const client = await createMatrixClient(
       homeserverUrl,
-      homeserverUsername,
-      homeserverPassword
+      extra.authInfo?.token,
+      extra.authInfo?.extra?.userId as string | undefined
     );
-    const client = await createMatrixClient(homeserverUrl, accessToken, userId);
 
     try {
       const users = client.getUsers();
@@ -369,10 +308,19 @@ async function processMessage(
 
 // Private method to create a Matrix client instance
 async function createMatrixClient(
-  homeserverUrl: string,
-  accessToken: string,
-  userId: string
+  homeserverUrl: string | undefined,
+  accessToken: string | undefined,
+  userId: string | undefined
 ): Promise<MatrixClient> {
+  if (!homeserverUrl) {
+    throw new Error("Homeserver URL is required to create a Matrix client.");
+  }
+  if (!accessToken) {
+    throw new Error("Access token is required to create a Matrix client.");
+  }
+  if (!userId) {
+    throw new Error("User ID is required to create a Matrix client.");
+  }
   const client = sdk.createClient({
     baseUrl: homeserverUrl,
     accessToken,
