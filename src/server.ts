@@ -25,6 +25,9 @@ server.tool(
     homeserverUrl: z.string(),
   },
   async ({ homeserverUrl }, extra): Promise<CallToolResult> => {
+    console.log(
+      `Token: ${extra.authInfo?.token}, User Id: ${extra.authInfo?.extra?.userId}`
+    );
     const client = await createMatrixClient(
       homeserverUrl,
       extra.authInfo?.token,

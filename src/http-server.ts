@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import {
   createOAuthMetadata,
   mcpAuthMetadataRouter,
@@ -8,30 +8,33 @@ import { OAuthMetadata } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { ProxyOAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/providers/proxyProvider.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import routes from "./routes.js";
+import { verifyAccessToken } from "./verifyAccessToken.js";
 
 const app = express();
 app.use(express.json());
 
 const PORT = 3000;
 const kcAuthUrlStr =
-  "https://localhost:8443/realms/localrealm/protocol/openid-connect/auth";
+  "https://localhost:8444/realms/localrealm/protocol/openid-connect/auth";
+const kcTokenUrlStr =
+  "https://localhost:8444/realms/localrealm/protocol/openid-connect/token";
+const kcRegistrationUrlStr =
+  "https://localhost:8444/realms/localrealm/clients-registrations/openid-connect";
+const kcRevocationUrlStr =
+  "https://localhost:8444/realms/localrealm/protocol/openid-connect/revoke";
 const kcAuthUrl = new URL(kcAuthUrlStr);
 const mcpServerUrl = new URL("http://localhost:3000/mcp");
 
 const proxyProvider = new ProxyOAuthServerProvider({
   endpoints: {
     authorizationUrl: kcAuthUrlStr,
-    tokenUrl:
-      "https://localhost:8443/realms/localrealm/protocol/openid-connect/token",
-    revocationUrl:
-      "https://localhost:8443/realms/localrealm/protocol/openid-connect/revoke",
+    registrationUrl: kcRegistrationUrlStr,
+    tokenUrl: kcTokenUrlStr,
+    revocationUrl: kcRevocationUrlStr,
   },
   verifyAccessToken: async (token) => {
-    return {
-      token,
-      clientId: "123",
-      scopes: ["openid", "email", "profile"],
-    };
+    // Call your real verifyAccessToken implementation
+    return await verifyAccessToken(token);
   },
   getClient: async (client_id) => {
     return {
@@ -41,20 +44,23 @@ const proxyProvider = new ProxyOAuthServerProvider({
   },
 });
 
+const scopesSupported: string[] = ["mcp:tools"];
 const oauthMetadata: OAuthMetadata = createOAuthMetadata({
   provider: proxyProvider,
   issuerUrl: kcAuthUrl,
-  scopesSupported: ["mcp:tools"],
+  scopesSupported,
 });
-oauthMetadata.registration_endpoint =
-  "https://localhost:8443/realms/localrealm/clients-registrations/openid-connect";
+oauthMetadata.registration_endpoint = kcRegistrationUrlStr;
+oauthMetadata.authorization_endpoint = kcAuthUrlStr;
+oauthMetadata.token_endpoint = kcTokenUrlStr;
+oauthMetadata.revocation_endpoint = kcRevocationUrlStr;
 
 // Add metadata routes to the main MCP server
 app.use(
   mcpAuthMetadataRouter({
     oauthMetadata,
     resourceServerUrl: mcpServerUrl,
-    scopesSupported: ["mcp:tools"],
+    scopesSupported,
     resourceName: "Matrix MCP Server",
   })
 );
@@ -72,7 +78,7 @@ app.use(
   "/mcp",
   requireBearerAuth({
     verifier: proxyProvider,
-    requiredScopes: ["default"],
+    requiredScopes: ["mcp:tools"],
     resourceMetadataUrl: kcAuthUrl.toString(),
   }),
   routes
