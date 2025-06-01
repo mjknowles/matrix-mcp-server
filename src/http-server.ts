@@ -44,7 +44,7 @@ const proxyProvider = new ProxyOAuthServerProvider({
   },
 });
 
-const scopesSupported: string[] = ["mcp:tools"];
+const scopesSupported: string[] = ["mcp:tools", "profile", "openid", "email"];
 const oauthMetadata: OAuthMetadata = createOAuthMetadata({
   provider: proxyProvider,
   issuerUrl: kcAuthUrl,
@@ -78,7 +78,7 @@ app.use(
   "/mcp",
   requireBearerAuth({
     verifier: proxyProvider,
-    requiredScopes: ["mcp:tools"],
+    requiredScopes: scopesSupported,
     resourceMetadataUrl: kcAuthUrl.toString(),
   }),
   routes

@@ -3,6 +3,8 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import * as sdk from "matrix-js-sdk";
 import { EventType, MatrixClient } from "matrix-js-sdk";
 import { z } from "zod";
+import https from "https";
+import fetch, { RequestInit, Request } from "node-fetch";
 
 const server = new McpServer(
   {
@@ -22,16 +24,14 @@ const server = new McpServer(
 server.tool(
   "list-joined-rooms",
   {
-    homeserverUrl: z.string(),
+    homeserverUrl: z.string().default("https://localhost:8008/"),
+    domain: z.string().default("matrix.example.com"),
   },
-  async ({ homeserverUrl }, extra): Promise<CallToolResult> => {
-    console.log(
-      `Token: ${extra.authInfo?.token}, User Id: ${extra.authInfo?.extra?.userId}`
-    );
+  async ({ homeserverUrl, domain }, extra): Promise<CallToolResult> => {
     const client = await createMatrixClient(
       homeserverUrl,
       extra.authInfo?.token,
-      extra.authInfo?.extra?.userId as string | undefined
+      `@${(extra.authInfo?.extra?.email as string)?.split("@")[0]}:${domain}`
     );
 
     try {
@@ -186,6 +186,7 @@ server.tool(
   "identify-active-users",
   {
     homeserverUrl: z.string(),
+    userId: z.string(),
     roomId: z.string(),
     limit: z.number().optional().default(10),
   },
@@ -328,6 +329,13 @@ async function createMatrixClient(
     baseUrl: homeserverUrl,
     accessToken,
     userId,
+    fetchFn: async (
+      input: URL | Request | string,
+      init?: RequestInit | undefined
+    ) => {
+      const agent = new https.Agent({ rejectUnauthorized: false });
+      return fetch(input, { ...(init || {}), agent });
+    },
   });
   await client.startClient({ initialSyncLimit: 100 });
   // Wait for the initial sync to complete
