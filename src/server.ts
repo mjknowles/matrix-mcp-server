@@ -35,8 +35,7 @@ server.tool(
     const client = await createMatrixClient(
       homeserverUrl,
       getUserName(extra, domain),
-      extra.authInfo?.token || "",
-      extra.authInfo?.clientId || ""
+      extra.authInfo?.token || ""
     );
 
     try {
@@ -330,8 +329,7 @@ async function processMessage(
 async function createMatrixClient(
   homeserverUrl: string | undefined,
   userId: string | undefined,
-  originalAccessToken: string,
-  originalClientId: string
+  originalAccessToken: string
 ): Promise<MatrixClient> {
   if (!homeserverUrl) {
     throw new Error("Homeserver URL is required to create a Matrix client.");
@@ -344,24 +342,17 @@ async function createMatrixClient(
       "Original access token is required for Matrix client authentication."
     );
   }
-  if (!originalClientId) {
-    throw new Error(
-      "Original client ID is required for Matrix client authentication."
-    );
-  }
 
   const matrixAccessToken = await exchangeToken(
     keycloakUrl,
     matrixClientId,
     matrixClientSecret,
-    originalAccessToken,
-    homeserverUrl,
-    originalClientId
+    originalAccessToken
   );
 
   const client = sdk.createClient({
     baseUrl: homeserverUrl,
-    matrixAccessToken,
+    accessToken: matrixAccessToken,
     userId,
     fetchFn: async (
       input: URL | Request | string,
@@ -386,11 +377,8 @@ async function exchangeToken(
   keycloakUrl: string,
   clientId: string, // MCP server's client_id
   clientSecret: string, // MCP server's client_secret
-  subjectToken: string, // The original token from the MVC client
-  resourceUri: string, // The URI of the target resource (Matrix homeserver)
-  originalClientId: string // The original client_id of the MVC client
+  subjectToken: string // The original token from the MVC client
 ): Promise<string> {
-  console.log("Subject token for exchange:", subjectToken);
   const tokenUrl = `${keycloakUrl}/protocol/openid-connect/token`;
   const params = new URLSearchParams();
 
