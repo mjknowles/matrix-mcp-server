@@ -33,7 +33,6 @@ export async function verifyAccessToken(token: string): Promise<AuthInfo> {
       const clientId = decoded.azp || decoded.client_id;
       const scopes =
         typeof decoded.scope === "string" ? decoded.scope.split(" ") : [];
-      console.log("Scopes:", scopes);
       const expiresAt = decoded.exp;
 
       let userInfo: Record<string, unknown> = {};
@@ -73,7 +72,6 @@ export async function verifyAccessToken(token: string): Promise<AuthInfo> {
         expiresAt,
         extra: userInfo,
       };
-      console.log("AuthInfo:", authInfo);
       resolve(authInfo);
     });
   });

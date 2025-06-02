@@ -44,7 +44,13 @@ const proxyProvider = new ProxyOAuthServerProvider({
   },
 });
 
-const scopesSupported: string[] = ["mcp:tools", "profile", "openid", "email"];
+const scopesSupported: string[] = [
+  "mcp:tools",
+  "profile",
+  "openid",
+  "email",
+  "auto-add-audience",
+];
 const oauthMetadata: OAuthMetadata = createOAuthMetadata({
   provider: proxyProvider,
   issuerUrl: kcAuthUrl,
