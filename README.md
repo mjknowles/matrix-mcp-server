@@ -8,6 +8,7 @@
 
 - Node.js 20 or higher
 - npm (Node package manager)
+- access token; visible in Element in `All Settings --> Help & About --> Access Token`
 
 ## Setup Instructions
 
@@ -32,11 +33,8 @@
 
 4. **Test the Server**
 
-Run Inspector to test the server. Make sure you get an access token via the `connect-matrix` tool first.
-
 ```bash
 npm run dev
-npx @modelcontextprotocol/inspector
 ```
 
 ## Add to VSCode
@@ -47,16 +45,28 @@ In mcp.json:
 {
   "servers": {
     "matrix-mcp": {
-      "url": "http://localhost:3000/mcp"
+      "url": "http://localhost:3000/mcp",
+      "type": "http",
+      "headers": {
+        "MATRIX_ACCESS_TOKEN": "${input:matrix-access-token}",
+        "MATRIX_USER_ID": "@<your-matrix-username>:<your-homeserver-domain>",
+        "MATRIX_HOMESERVER_URL": "<your-homeserver-url>"
+      }
     }
-  }
+  },
+    "inputs": [
+    {
+      "id": "matrix-access-token",
+      "type": "promptString",
+      "description": "Provide your homeserver access token."
+    }
+  ]
 }
 ```
 
 ## Notes
 
 - This project is for development purposes. For production use, ensure proper session management and security measures are implemented.
-- Refer to the `src/server.ts` file for additional configuration options.
 
 ## License
 
