@@ -14,6 +14,30 @@ import { verifyAccessToken } from "./auth/verifyAccessToken.js";
 const app = express();
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.debug(
+    `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`
+  );
+  next();
+});
+
+app.use((req, res, next) => {
+  const oldSend = res.send;
+  res.send = function (body) {
+    const wwwAuth = res.getHeader("WWW-Authenticate");
+    console.debug(
+      `[${new Date().toISOString()}] RESPONSE ${req.method} ${
+        req.originalUrl
+      } ${res.statusCode} ${
+        typeof body === "string" ? body : JSON.stringify(body)
+      }${wwwAuth ? `\nWWW-Authenticate: ${wwwAuth}` : ""}`
+    );
+    // @ts-ignore
+    return oldSend.call(this, body);
+  };
+  next();
+});
+
 const PORT = parseInt(process.env.PORT || "3000");
 const ENABLE_OAUTH = process.env.ENABLE_OAUTH === "true";
 let proxyProvider: ProxyOAuthServerProvider | undefined;
@@ -55,13 +79,10 @@ if (ENABLE_OAUTH) {
     },
   });
 
-  scopesSupported = [
-    "mcp:tools",
-    "profile",
-    "openid",
-    "email",
-    "auto-add-audience",
-  ];
+  const scopesSupported = process.env.OAUTH_SCOPES_SUPPORTED
+    ? process.env.OAUTH_SCOPES_SUPPORTED.split(",").map((scope) => scope.trim())
+    : [];
+
   oauthMetadata = createOAuthMetadata({
     provider: proxyProvider,
     issuerUrl: idpIssuerUrl,
