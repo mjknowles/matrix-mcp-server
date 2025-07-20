@@ -8,88 +8,114 @@ import { OAuthMetadata } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { ProxyOAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/providers/proxyProvider.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import routes from "./routes.js";
-import { verifyAccessToken } from "./verifyAccessToken.js";
+import { verifyAccessToken } from "./auth/verifyAccessToken.js";
 
 const app = express();
 app.use(express.json());
 
-const PORT = 3000;
-const kcAuthUrlStr =
-  "https://localhost:8444/realms/localrealm/protocol/openid-connect/auth";
-const kcTokenUrlStr =
-  "https://localhost:8444/realms/localrealm/protocol/openid-connect/token";
-const kcRegistrationUrlStr =
-  "https://localhost:8444/realms/localrealm/clients-registrations/openid-connect";
-const kcRevocationUrlStr =
-  "https://localhost:8444/realms/localrealm/protocol/openid-connect/revoke";
-const kcAuthUrl = new URL(kcAuthUrlStr);
-const mcpServerUrl = new URL("http://localhost:3000/mcp");
+const PORT = parseInt(process.env.PORT || "3000");
+const ENABLE_OAUTH = process.env.ENABLE_OAUTH === "true";
+let proxyProvider: ProxyOAuthServerProvider | undefined;
+let oauthMetadata: OAuthMetadata | undefined;
+let scopesSupported: string[] | undefined;
+let idpIssuerUrl: URL | undefined;
+let mcpServerUrl: URL | undefined;
 
-const proxyProvider = new ProxyOAuthServerProvider({
-  endpoints: {
-    authorizationUrl: kcAuthUrlStr,
-    registrationUrl: kcRegistrationUrlStr,
-    tokenUrl: kcTokenUrlStr,
-    revocationUrl: kcRevocationUrlStr,
-  },
-  verifyAccessToken: async (token) => {
-    // Call your real verifyAccessToken implementation
-    return await verifyAccessToken(token);
-  },
-  getClient: async (client_id) => {
-    return {
-      client_id,
-      redirect_uris: ["http://localhost:3000/callback"],
-    };
-  },
-});
+if (ENABLE_OAUTH) {
+  const authUrlStr = process.env.IDP_AUTHORIZATION_URL || "";
+  const tokenUrlStr = process.env.IDP_TOKEN_URL || "";
+  const registrationUrlStr = process.env.IDP_REGISTRATION_URL || "";
+  const revocationUrlStr = process.env.IDP_REVOCATION_URL || "";
+  const issuerUrlStr = process.env.IDP_ISSUER_URL || "";
+  const callbackUrl =
+    process.env.OAUTH_CALLBACK_URL || `http://localhost:${PORT}/callback`;
 
-const scopesSupported: string[] = [
-  "mcp:tools",
-  "profile",
-  "openid",
-  "email",
-  "auto-add-audience",
-];
-const oauthMetadata: OAuthMetadata = createOAuthMetadata({
-  provider: proxyProvider,
-  issuerUrl: kcAuthUrl,
-  scopesSupported,
-});
-oauthMetadata.registration_endpoint = kcRegistrationUrlStr;
-oauthMetadata.authorization_endpoint = kcAuthUrlStr;
-oauthMetadata.token_endpoint = kcTokenUrlStr;
-oauthMetadata.revocation_endpoint = kcRevocationUrlStr;
+  idpIssuerUrl = new URL(issuerUrlStr);
+  mcpServerUrl = new URL(
+    process.env.MCP_SERVER_URL || `http://localhost:${PORT}/mcp`
+  );
 
-// Add metadata routes to the main MCP server
-app.use(
-  mcpAuthMetadataRouter({
-    oauthMetadata,
-    resourceServerUrl: mcpServerUrl,
-    scopesSupported,
-    resourceName: "Matrix MCP Server",
-  })
-);
+  proxyProvider = new ProxyOAuthServerProvider({
+    endpoints: {
+      authorizationUrl: authUrlStr,
+      registrationUrl: registrationUrlStr,
+      tokenUrl: tokenUrlStr,
+      revocationUrl: revocationUrlStr,
+    },
+    verifyAccessToken: async (token) => {
+      // Call your real verifyAccessToken implementation
+      return await verifyAccessToken(token);
+    },
+    getClient: async (client_id) => {
+      return {
+        client_id,
+        redirect_uris: [callbackUrl],
+      };
+    },
+  });
 
-app.use(
-  mcpAuthRouter({
+  scopesSupported = [
+    "mcp:tools",
+    "profile",
+    "openid",
+    "email",
+    "auto-add-audience",
+  ];
+  oauthMetadata = createOAuthMetadata({
     provider: proxyProvider,
-    issuerUrl: kcAuthUrl,
-    baseUrl: mcpServerUrl,
-    serviceDocumentationUrl: new URL("https://docs.example.com/"),
-  })
-);
+    issuerUrl: idpIssuerUrl,
+    scopesSupported,
+  });
+  oauthMetadata.registration_endpoint = registrationUrlStr;
+  oauthMetadata.authorization_endpoint = authUrlStr;
+  oauthMetadata.token_endpoint = tokenUrlStr;
+  oauthMetadata.revocation_endpoint = revocationUrlStr;
+}
 
-app.use(
-  "/mcp",
-  requireBearerAuth({
-    verifier: proxyProvider,
-    requiredScopes: scopesSupported,
-    resourceMetadataUrl: kcAuthUrl.toString(),
-  }),
-  routes
-);
+// Add OAuth routes and middleware only if OAuth is enabled
+if (
+  ENABLE_OAUTH &&
+  oauthMetadata &&
+  mcpServerUrl &&
+  scopesSupported &&
+  proxyProvider &&
+  idpIssuerUrl
+) {
+  // Add metadata routes to the main MCP server
+  app.use(
+    mcpAuthMetadataRouter({
+      oauthMetadata,
+      resourceServerUrl: mcpServerUrl,
+      scopesSupported,
+      resourceName: "Matrix MCP Server",
+    })
+  );
+
+  app.use(
+    mcpAuthRouter({
+      provider: proxyProvider,
+      issuerUrl: idpIssuerUrl,
+      baseUrl: mcpServerUrl,
+      serviceDocumentationUrl: new URL("https://docs.example.com/"),
+    })
+  );
+
+  app.use(
+    "/mcp",
+    requireBearerAuth({
+      verifier: proxyProvider,
+      requiredScopes: scopesSupported,
+      resourceMetadataUrl: idpIssuerUrl.toString(),
+    }),
+    routes
+  );
+} else {
+  // No OAuth - direct access to MCP endpoint
+  app.use("/mcp", routes);
+}
 
 app.listen(PORT, () => {
   console.log(`MCP HTTP Server listening on port ${PORT}`);
+  console.log(`OAuth authentication: ${ENABLE_OAUTH ? "enabled" : "disabled"}`);
+  console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
 });

@@ -4,10 +4,10 @@ import jwksClient from "jwks-rsa";
 import https from "https";
 import fetch from "node-fetch";
 
-const keycloakUrl = "https://localhost:8444/realms/localrealm";
-const userInfoUrl = `${keycloakUrl}/protocol/openid-connect/userinfo`;
+const idpUrl = process.env.IDP_ISSUER_URL || "";
+const userInfoUrl = `${idpUrl}/protocol/openid-connect/userinfo`;
 const client = jwksClient({
-  jwksUri: `${keycloakUrl}/protocol/openid-connect/certs`,
+  jwksUri: `${idpUrl}/protocol/openid-connect/certs`,
   requestHeaders: {},
   requestAgent: new https.Agent({ rejectUnauthorized: false }),
 });
@@ -45,7 +45,7 @@ export async function verifyAccessToken(token: string): Promise<AuthInfo> {
           agent: new https.Agent({ rejectUnauthorized: false }),
         });
         if (resp.ok) {
-          userInfo = await resp.json();
+          userInfo = (await resp.json()) as Record<string, unknown>;
         } else {
           // Log error details for debugging
           const errorBody = await resp.text();

@@ -12,7 +12,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@modelcontextprotocol/sdk": "^1.16.0",
     "express": "^5.1.0",
     "matrix-js-sdk": "^37.4.0",
     "jsonwebtoken": "^9.0.2",
