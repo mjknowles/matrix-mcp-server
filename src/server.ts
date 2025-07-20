@@ -43,10 +43,19 @@ const server = new McpServer(
  * Helper function to get access token based on OAuth mode
  */
 function getAccessToken(
-  matrixAccessToken: string | undefined,
+  headers: Record<string, string | string[] | undefined> | undefined,
   oauthToken: string | undefined
 ): string {
-  return ENABLE_OAUTH ? oauthToken || "" : matrixAccessToken || "";
+  if (ENABLE_OAUTH) {
+    return oauthToken || "";
+  }
+
+  // Get MATRIX_ACCESS_TOKEN from headers
+  const matrixToken = headers?.["MATRIX_ACCESS_TOKEN"];
+  if (Array.isArray(matrixToken)) {
+    return matrixToken[0] || "";
+  }
+  return matrixToken || "";
 }
 
 /**
@@ -81,18 +90,11 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
     },
   },
-  async (
-    { homeserverUrl, matrixUserId, matrixAccessToken },
-    extra
-  ): Promise<CallToolResult> => {
+  async ({ homeserverUrl, matrixUserId }, extra): Promise<CallToolResult> => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -144,10 +146,6 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
       limit: z
         .number()
@@ -155,12 +153,9 @@ server.registerTool(
         .describe("Maximum number of messages to retrieve (default: 20)"),
     },
   },
-  async (
-    { homeserverUrl, matrixUserId, matrixAccessToken, roomId, limit },
-    extra
-  ) => {
+  async ({ homeserverUrl, matrixUserId, roomId, limit }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -236,16 +231,12 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, matrixAccessToken, roomId }, extra) => {
+  async ({ homeserverUrl, matrixUserId, roomId }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -319,10 +310,6 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
       startDate: z
         .string()
@@ -333,18 +320,11 @@ server.registerTool(
     },
   },
   async (
-    {
-      homeserverUrl,
-      matrixUserId,
-      matrixAccessToken,
-      roomId,
-      startDate,
-      endDate,
-    },
+    { homeserverUrl, matrixUserId, roomId, startDate, endDate },
     extra
   ) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -420,10 +400,6 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
       limit: z
         .number()
@@ -431,12 +407,9 @@ server.registerTool(
         .describe("Maximum number of active users to return (default: 10)"),
     },
   },
-  async (
-    { homeserverUrl, matrixUserId, matrixAccessToken, roomId, limit },
-    extra
-  ) => {
+  async ({ homeserverUrl, matrixUserId, roomId, limit }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -510,15 +483,11 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, matrixAccessToken }, extra) => {
+  async ({ homeserverUrl, matrixUserId }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -575,16 +544,12 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, matrixAccessToken, roomId }, extra) => {
+  async ({ homeserverUrl, matrixUserId, roomId }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -671,10 +636,6 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       targetUserId: z
         .string()
         .describe(
@@ -682,12 +643,9 @@ server.registerTool(
         ),
     },
   },
-  async (
-    { homeserverUrl, matrixUserId, matrixAccessToken, targetUserId },
-    extra
-  ) => {
+  async ({ homeserverUrl, matrixUserId, targetUserId }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -773,15 +731,11 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, matrixAccessToken }, extra) => {
+  async ({ homeserverUrl, matrixUserId }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -879,10 +833,6 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       searchTerm: z
         .string()
         .optional()
@@ -900,18 +850,11 @@ server.registerTool(
     },
   },
   async (
-    {
-      homeserverUrl,
-      matrixUserId,
-      matrixAccessToken,
-      searchTerm,
-      server,
-      limit,
-    },
+    { homeserverUrl, matrixUserId, searchTerm, server, limit },
     extra
   ): Promise<CallToolResult> => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -1011,22 +954,15 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       roomFilter: z
         .string()
         .optional()
         .describe("Optional room ID to get counts for specific room only"),
     },
   },
-  async (
-    { homeserverUrl, matrixUserId, matrixAccessToken, roomFilter },
-    extra
-  ) => {
+  async ({ homeserverUrl, matrixUserId, roomFilter }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
@@ -1148,22 +1084,15 @@ server.registerTool(
       matrixUserId: z
         .string()
         .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-      matrixAccessToken: z
-        .string()
-        .optional()
-        .describe("Matrix access token (required when OAuth disabled)"),
       includeEmpty: z
         .boolean()
         .default(false)
         .describe("Include DM rooms with no recent messages (default: false)"),
     },
   },
-  async (
-    { homeserverUrl, matrixUserId, matrixAccessToken, includeEmpty },
-    extra
-  ) => {
+  async ({ homeserverUrl, matrixUserId, includeEmpty }, extra) => {
     const accessToken = getAccessToken(
-      matrixAccessToken,
+      extra.requestInfo?.headers,
       extra.authInfo?.token
     );
     const client = await createConfiguredMatrixClient(
