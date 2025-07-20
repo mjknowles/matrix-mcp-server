@@ -1,16 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { createMatrixClient, stopMatrixClient } from "./matrix/client.js";
 import { processMessage, processMessagesByDate, countMessagesByUser } from "./matrix/messageProcessor.js";
 import { TokenExchangeConfig } from "./auth/tokenExchange.js";
-import {
-  listJoinedRoomsSchema,
-  getRoomMessagesSchema,
-  getRoomMembersSchema,
-  getMessagesByDateSchema,
-  identifyActiveUsersSchema,
-  getAllUsersSchema,
-} from "./schemas/toolSchemas.js";
 
 // Environment configuration
 const ENABLE_OAUTH = process.env.ENABLE_OAUTH === "true";
@@ -64,12 +57,16 @@ async function createConfiguredMatrixClient(
 }
 
 // Tool: List joined rooms
-server.tool(
+server.registerTool(
   "list-joined-rooms",
   {
-    homeserverUrl: listJoinedRoomsSchema.homeserverUrl.default(defaultHomeserverUrl),
-    matrixUserId: listJoinedRoomsSchema.matrixUserId,
-    matrixAccessToken: listJoinedRoomsSchema.matrixAccessToken,
+    title: "List Joined Matrix Rooms",
+    description: "Get a list of all Matrix rooms the user has joined, including room names, IDs, and basic information",
+    inputSchema: {
+      homeserverUrl: z.string().default(defaultHomeserverUrl).describe("Matrix homeserver URL (e.g., https://matrix.org)"),
+      matrixUserId: z.string().describe("Full Matrix user ID (e.g., @username:domain.com)"),
+      matrixAccessToken: z.string().optional().describe("Matrix access token (required when OAuth disabled)"),
+    },
   },
   async ({ homeserverUrl, matrixUserId, matrixAccessToken }, extra): Promise<CallToolResult> => {
     const accessToken = getAccessToken(matrixAccessToken, extra.authInfo?.token);
@@ -77,16 +74,22 @@ server.tool(
 
     try {
       const rooms = client.getRooms();
-      console.log(`Room count: ${rooms.length}`);
+      console.log(`Found ${rooms.length} joined rooms`);
       return {
         content: rooms.map((room) => ({
           type: "text",
-          text: `Room ID: ${room.roomId}, Name: ${room.name}`,
+          text: `Room: ${room.name || "Unnamed Room"} (${room.roomId}) - ${room.getJoinedMemberCount()} members`,
         })),
       };
     } catch (error: any) {
       console.error(`Failed to list joined rooms: ${error.message}`);
-      throw error;
+      return {
+        content: [{
+          type: "text",
+          text: `Error: Failed to list joined rooms - ${error.message}`,
+        }],
+        isError: true,
+      };
     } finally {
       stopMatrixClient(client);
     }
@@ -94,14 +97,18 @@ server.tool(
 );
 
 // Tool: Get room messages
-server.tool(
+server.registerTool(
   "get-room-messages",
   {
-    homeserverUrl: getRoomMessagesSchema.homeserverUrl.default(defaultHomeserverUrl),
-    matrixUserId: getRoomMessagesSchema.matrixUserId,
-    matrixAccessToken: getRoomMessagesSchema.matrixAccessToken,
-    roomId: getRoomMessagesSchema.roomId,
-    limit: getRoomMessagesSchema.limit,
+    title: "Get Matrix Room Messages",
+    description: "Retrieve recent messages from a specific Matrix room, including text and image content",
+    inputSchema: {
+      homeserverUrl: z.string().default(defaultHomeserverUrl).describe("Matrix homeserver URL"),
+      matrixUserId: z.string().describe("Full Matrix user ID (e.g., @username:domain.com)"),
+      matrixAccessToken: z.string().optional().describe("Matrix access token (required when OAuth disabled)"),
+      roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
+      limit: z.number().default(20).describe("Maximum number of messages to retrieve (default: 20)"),
+    },
   },
   async ({ homeserverUrl, matrixUserId, matrixAccessToken, roomId, limit }, extra) => {
     const accessToken = getAccessToken(matrixAccessToken, extra.authInfo?.token);
@@ -110,7 +117,13 @@ server.tool(
     try {
       const room = client.getRoom(roomId);
       if (!room) {
-        throw new Error(`Room with ID ${roomId} not found.`);
+        return {
+          content: [{
+            type: "text",
+            text: `Error: Room with ID ${roomId} not found. You may not be a member of this room.`,
+          }],
+          isError: true,
+        };
       }
 
       const messages = await Promise.all(
@@ -121,12 +134,23 @@ server.tool(
           .map((event) => processMessage(event, client))
       );
 
+      const validMessages = messages.filter((message) => message !== null);
+      
       return {
-        content: messages.filter((message) => message !== null),
+        content: validMessages.length > 0 ? validMessages : [{
+          type: "text",
+          text: `No messages found in room ${room.name || roomId}`,
+        }],
       };
     } catch (error: any) {
       console.error(`Failed to get room messages: ${error.message}`);
-      throw error;
+      return {
+        content: [{
+          type: "text",
+          text: `Error: Failed to get room messages - ${error.message}`,
+        }],
+        isError: true,
+      };
     } finally {
       stopMatrixClient(client);
     }
@@ -134,13 +158,17 @@ server.tool(
 );
 
 // Tool: Get room members
-server.tool(
+server.registerTool(
   "get-room-members",
   {
-    homeserverUrl: getRoomMembersSchema.homeserverUrl.default(defaultHomeserverUrl),
-    matrixUserId: getRoomMembersSchema.matrixUserId,
-    matrixAccessToken: getRoomMembersSchema.matrixAccessToken,
-    roomId: getRoomMembersSchema.roomId,
+    title: "Get Matrix Room Members",
+    description: "List all members currently joined to a Matrix room with their display names and user IDs",
+    inputSchema: {
+      homeserverUrl: z.string().default(defaultHomeserverUrl).describe("Matrix homeserver URL"),
+      matrixUserId: z.string().describe("Full Matrix user ID (e.g., @username:domain.com)"),
+      matrixAccessToken: z.string().optional().describe("Matrix access token (required when OAuth disabled)"),
+      roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
+    },
   },
   async ({ homeserverUrl, matrixUserId, matrixAccessToken, roomId }, extra) => {
     const accessToken = getAccessToken(matrixAccessToken, extra.authInfo?.token);
@@ -149,7 +177,13 @@ server.tool(
     try {
       const room = client.getRoom(roomId);
       if (!room) {
-        throw new Error(`Room with ID ${roomId} not found.`);
+        return {
+          content: [{
+            type: "text",
+            text: `Error: Room with ID ${roomId} not found. You may not be a member of this room.`,
+          }],
+          isError: true,
+        };
       }
 
       const members = room.getJoinedMembers().map((member) => ({
@@ -158,14 +192,23 @@ server.tool(
       }));
 
       return {
-        content: members.map((member) => ({
+        content: members.length > 0 ? members.map((member) => ({
           type: "text",
-          text: `User ID: ${member.user_id}, Display Name: ${member.display_name}`,
-        })),
+          text: `${member.display_name} (${member.user_id})`,
+        })) : [{
+          type: "text",
+          text: `No members found in room ${room.name || roomId}`,
+        }],
       };
     } catch (error: any) {
       console.error(`Failed to get room members: ${error.message}`);
-      throw error;
+      return {
+        content: [{
+          type: "text",
+          text: `Error: Failed to get room members - ${error.message}`,
+        }],
+        isError: true,
+      };
     } finally {
       stopMatrixClient(client);
     }
@@ -173,15 +216,19 @@ server.tool(
 );
 
 // Tool: Get messages by date
-server.tool(
+server.registerTool(
   "get-messages-by-date",
   {
-    homeserverUrl: getMessagesByDateSchema.homeserverUrl.default(defaultHomeserverUrl),
-    matrixUserId: getMessagesByDateSchema.matrixUserId,
-    matrixAccessToken: getMessagesByDateSchema.matrixAccessToken,
-    roomId: getMessagesByDateSchema.roomId,
-    startDate: getMessagesByDateSchema.startDate,
-    endDate: getMessagesByDateSchema.endDate,
+    title: "Get Matrix Messages by Date Range",
+    description: "Retrieve messages from a Matrix room within a specific date range",
+    inputSchema: {
+      homeserverUrl: z.string().default(defaultHomeserverUrl).describe("Matrix homeserver URL"),
+      matrixUserId: z.string().describe("Full Matrix user ID (e.g., @username:domain.com)"),
+      matrixAccessToken: z.string().optional().describe("Matrix access token (required when OAuth disabled)"),
+      roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
+      startDate: z.string().describe("Start date in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)"),
+      endDate: z.string().describe("End date in ISO 8601 format (e.g., 2024-01-02T00:00:00Z)"),
+    },
   },
   async ({ homeserverUrl, matrixUserId, matrixAccessToken, roomId, startDate, endDate }, extra) => {
     const accessToken = getAccessToken(matrixAccessToken, extra.authInfo?.token);
@@ -190,18 +237,33 @@ server.tool(
     try {
       const room = client.getRoom(roomId);
       if (!room) {
-        throw new Error(`Room with ID ${roomId} not found.`);
+        return {
+          content: [{
+            type: "text",
+            text: `Error: Room with ID ${roomId} not found. You may not be a member of this room.`,
+          }],
+          isError: true,
+        };
       }
 
       const events = room.getLiveTimeline().getEvents();
       const messages = await processMessagesByDate(events, startDate, endDate, client);
 
       return {
-        content: messages,
+        content: messages.length > 0 ? messages : [{
+          type: "text",
+          text: `No messages found in room ${room.name || roomId} between ${startDate} and ${endDate}`,
+        }],
       };
     } catch (error: any) {
       console.error(`Failed to filter messages by date: ${error.message}`);
-      throw error;
+      return {
+        content: [{
+          type: "text",
+          text: `Error: Failed to filter messages by date - ${error.message}`,
+        }],
+        isError: true,
+      };
     } finally {
       stopMatrixClient(client);
     }
@@ -209,14 +271,18 @@ server.tool(
 );
 
 // Tool: Identify active users
-server.tool(
+server.registerTool(
   "identify-active-users",
   {
-    homeserverUrl: identifyActiveUsersSchema.homeserverUrl.default(defaultHomeserverUrl),
-    matrixUserId: identifyActiveUsersSchema.matrixUserId,
-    matrixAccessToken: identifyActiveUsersSchema.matrixAccessToken,
-    roomId: identifyActiveUsersSchema.roomId,
-    limit: identifyActiveUsersSchema.limit,
+    title: "Identify Most Active Users",
+    description: "Find the most active users in a Matrix room based on message count in recent history",
+    inputSchema: {
+      homeserverUrl: z.string().default(defaultHomeserverUrl).describe("Matrix homeserver URL"),
+      matrixUserId: z.string().describe("Full Matrix user ID (e.g., @username:domain.com)"),
+      matrixAccessToken: z.string().optional().describe("Matrix access token (required when OAuth disabled)"),
+      roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
+      limit: z.number().default(10).describe("Maximum number of active users to return (default: 10)"),
+    },
   },
   async ({ homeserverUrl, matrixUserId, matrixAccessToken, roomId, limit }, extra) => {
     const accessToken = getAccessToken(matrixAccessToken, extra.authInfo?.token);
@@ -225,21 +291,36 @@ server.tool(
     try {
       const room = client.getRoom(roomId);
       if (!room) {
-        throw new Error(`Room with ID ${roomId} not found.`);
+        return {
+          content: [{
+            type: "text",
+            text: `Error: Room with ID ${roomId} not found. You may not be a member of this room.`,
+          }],
+          isError: true,
+        };
       }
 
       const events = room.getLiveTimeline().getEvents();
       const activeUsers = countMessagesByUser(events, limit);
 
       return {
-        content: activeUsers.map((user) => ({
+        content: activeUsers.length > 0 ? activeUsers.map((user) => ({
           type: "text",
-          text: `User ID: ${user.userId}, Message Count: ${user.count}`,
-        })),
+          text: `${user.userId}: ${user.count} messages`,
+        })) : [{
+          type: "text",
+          text: `No message activity found in room ${room.name || roomId}`,
+        }],
       };
     } catch (error: any) {
       console.error(`Failed to identify active users: ${error.message}`);
-      throw error;
+      return {
+        content: [{
+          type: "text",
+          text: `Error: Failed to identify active users - ${error.message}`,
+        }],
+        isError: true,
+      };
     } finally {
       stopMatrixClient(client);
     }
@@ -247,12 +328,16 @@ server.tool(
 );
 
 // Tool: Get all users
-server.tool(
+server.registerTool(
   "get-all-users",
   {
-    homeserverUrl: getAllUsersSchema.homeserverUrl.default(defaultHomeserverUrl),
-    matrixUserId: getAllUsersSchema.matrixUserId,
-    matrixAccessToken: getAllUsersSchema.matrixAccessToken,
+    title: "Get All Known Users",
+    description: "List all users known to the Matrix client, including their display names and user IDs",
+    inputSchema: {
+      homeserverUrl: z.string().default(defaultHomeserverUrl).describe("Matrix homeserver URL"),
+      matrixUserId: z.string().describe("Full Matrix user ID (e.g., @username:domain.com)"),
+      matrixAccessToken: z.string().optional().describe("Matrix access token (required when OAuth disabled)"),
+    },
   },
   async ({ homeserverUrl, matrixUserId, matrixAccessToken }, extra) => {
     const accessToken = getAccessToken(matrixAccessToken, extra.authInfo?.token);
@@ -261,14 +346,23 @@ server.tool(
     try {
       const users = client.getUsers();
       return {
-        content: users.map((user) => ({
+        content: users.length > 0 ? users.map((user) => ({
           type: "text",
-          text: `User ID: ${user.userId}, Display Name: ${user.displayName}`,
-        })),
+          text: `${user.displayName || user.userId} (${user.userId})`,
+        })) : [{
+          type: "text",
+          text: "No users found in the client cache",
+        }],
       };
     } catch (error: any) {
       console.error(`Failed to get all users: ${error.message}`);
-      throw error;
+      return {
+        content: [{
+          type: "text",
+          text: `Error: Failed to get users - ${error.message}`,
+        }],
+        isError: true,
+      };
     } finally {
       stopMatrixClient(client);
     }
