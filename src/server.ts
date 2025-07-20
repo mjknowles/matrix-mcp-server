@@ -45,16 +45,33 @@ function getAccessToken(
   headers: Record<string, string | string[] | undefined> | undefined,
   oauthToken: string | undefined
 ): string {
-  if (ENABLE_OAUTH) {
-    return oauthToken || "";
+  const matrixTokenFromHeader = headers?.["matrix_access_token"];
+
+  // Prioritize matrix_access_token from headers
+  if (matrixTokenFromHeader) {
+    if (Array.isArray(matrixTokenFromHeader)) {
+      // If it's an array, take the first non-empty string.
+      const firstMatrixToken = matrixTokenFromHeader.find(
+        (token) => typeof token === "string" && token !== ""
+      );
+      if (firstMatrixToken) {
+        return firstMatrixToken;
+      }
+    } else if (
+      typeof matrixTokenFromHeader === "string" &&
+      matrixTokenFromHeader !== ""
+    ) {
+      // If it's a string and not empty
+      return matrixTokenFromHeader;
+    }
   }
 
-  // Get MATRIX_ACCESS_TOKEN from headers
-  const matrixToken = headers?.["matrix_access_token"];
-  if (Array.isArray(matrixToken)) {
-    return matrixToken[0] || "";
+  // If no valid matrix_access_token, and OAuth is enabled, use oauthToken
+  if (ENABLE_OAUTH && typeof oauthToken === "string" && oauthToken !== "") {
+    return oauthToken;
   }
-  return matrixToken || "";
+
+  return "";
 }
 
 /**

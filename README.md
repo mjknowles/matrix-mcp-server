@@ -37,6 +37,12 @@
 npm run dev
 ```
 
+## Add to Claude Code
+
+```bash
+claude mcp add --transport http matrix-server http://localhost:3000/mcp -H "matrix_user_id:  @user1:matrix.example.com" -H "matrix_homeserver_url: https://localhost:8008" -H "matrix_access_token: ${MATRIX_ACCESS_TOKEN}" --header "Authorization: Bearer ${MATRIX_MCP_TOKEN}"
+```
+
 ## Add to VSCode
 
 In mcp.json:

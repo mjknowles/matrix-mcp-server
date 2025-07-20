@@ -70,7 +70,6 @@ if (ENABLE_OAUTH) {
       revocationUrl: revocationUrlStr,
     },
     verifyAccessToken: async (token) => {
-      // Call your real verifyAccessToken implementation
       return await verifyAccessToken(token);
     },
     getClient: async (client_id) => {
