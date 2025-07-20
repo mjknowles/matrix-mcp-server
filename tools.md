@@ -32,38 +32,38 @@
 - [x] `identify-active-users` - Activity analysis
 - [x] `get-all-users` - User listing
 
-#### Missing Essential Basics (High Priority)
-- [ ] **`get-room-info`** - Complete room details and settings
+#### Missing Essential Basics (High Priority) ✅ **COMPLETED**
+- [x] **`get-room-info`** - Complete room details and settings
   - **SDK Methods**: `getRoom()`, room state events
   - **Features**: Name, topic, avatar, settings, power levels, encryption status
   - **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomId`
   - **Why Essential**: Users need room context before taking actions
 
-- [ ] **`get-user-profile`** - User profile information  
+- [x] **`get-user-profile`** - User profile information  
   - **SDK Methods**: `getUser()`, `downloadKeys()` for verification
   - **Features**: Display name, avatar, presence, verification status, shared rooms
   - **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `targetUserId`
   - **Why Essential**: Understanding who you're talking to
 
-- [ ] **`get-my-profile`** - Current user's own profile and settings
+- [x] **`get-my-profile`** - Current user's own profile and settings
   - **SDK Methods**: `getUser()` for self, account data retrieval
   - **Features**: Own display name, avatar, account settings, device list
   - **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`
   - **Why Essential**: Self-awareness and account management
 
-- [ ] **`search-public-rooms`** - Find public rooms to join
+- [x] **`search-public-rooms`** - Find public rooms to join
   - **SDK Methods**: `getPublicRooms()`, `getRoomDirectoryVisibility()`
   - **Features**: Search by name/topic, filter by server, pagination
   - **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `searchTerm?`, `server?`, `limit?`
   - **Why Essential**: Room discovery is fundamental
 
-- [ ] **`get-notification-counts`** - Unread/notification status
+- [x] **`get-notification-counts`** - Unread/notification status
   - **SDK Methods**: Room notification counts, push rules
   - **Features**: Unread counts per room, mentions, total notifications
   - **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomFilter?`
   - **Why Essential**: Users need to know what needs attention
 
-- [ ] **`get-direct-messages`** - List and access DM conversations
+- [x] **`get-direct-messages`** - List and access DM conversations
   - **SDK Methods**: Account data for DM mapping, room filtering
   - **Features**: All DM rooms, recent activity, unread status
   - **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `includeEmpty?`
@@ -282,15 +282,15 @@ server.registerTool(
 
 ## 🔧 Implementation Phases
 
-### Phase 0: Complete the Foundation (Week 1)
-- [ ] **Audit Current Tools**: Review and improve existing Tier 0 tools
-- [ ] **Missing Basics**: Implement the 6 missing essential tools
-  - [ ] `get-room-info`
-  - [ ] `get-user-profile`
-  - [ ] `get-my-profile`
-  - [ ] `search-public-rooms`
-  - [ ] `get-notification-counts`
-  - [ ] `get-direct-messages`
+### Phase 0: Complete the Foundation (Week 1) ✅ **COMPLETED**
+- [x] **Audit Current Tools**: Review and improve existing Tier 0 tools
+- [x] **Missing Basics**: Implement the 6 missing essential tools
+  - [x] `get-room-info`
+  - [x] `get-user-profile`
+  - [x] `get-my-profile`
+  - [x] `search-public-rooms`
+  - [x] `get-notification-counts`
+  - [x] `get-direct-messages`
 - [ ] **Infrastructure**: Set up new tool file structure in `src/tools/`
 - [ ] **Testing**: Ensure all basic tools are solid and tested
 
