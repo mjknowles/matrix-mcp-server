@@ -17,11 +17,10 @@ const defaultHomeserverUrl =
 
 // OAuth/Token exchange configuration
 const tokenExchangeConfig: TokenExchangeConfig = {
-  idpUrl:
-    process.env.IDP_ISSUER_URL || "https://localhost:8444/realms/localrealm",
-  clientId: process.env.MATRIX_CLIENT_ID || "synapse",
-  clientSecret: process.env.MATRIX_CLIENT_SECRET || "myclientsecret",
-  matrixClientId: process.env.MATRIX_CLIENT_ID || "synapse",
+  idpUrl: process.env.IDP_ISSUER_URL || "",
+  clientId: process.env.MATRIX_CLIENT_ID || "",
+  clientSecret: process.env.MATRIX_CLIENT_SECRET || "",
+  matrixClientId: process.env.MATRIX_CLIENT_ID || "",
 };
 
 // Create MCP server instance
