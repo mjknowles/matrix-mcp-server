@@ -108,6 +108,12 @@ The server provides these MCP tools (all require `matrixUserId` parameter):
 ### Core Configuration
 - `PORT`: Server port (default: 3000)
 - `ENABLE_OAUTH`: Set to "true" to enable OAuth authentication flow. When disabled, the MCP endpoint is accessible without authentication (experimental feature)
+- `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed origins for CORS. Leave empty for development (allows all origins). For production, specify allowed domains (e.g., "https://yourdomain.com,https://app.yourdomain.com")
+
+### HTTPS Configuration
+- `ENABLE_HTTPS`: Set to "true" to enable HTTPS, "false" for HTTP (default: false for development)
+- `SSL_KEY_PATH`: Path to SSL private key file (required when ENABLE_HTTPS=true)
+- `SSL_CERT_PATH`: Path to SSL certificate file (required when ENABLE_HTTPS=true)
 
 ### Identity Provider Configuration (OAuth mode only)
 - `IDP_ISSUER_URL`: OAuth issuer URL (default: Keycloak localhost)

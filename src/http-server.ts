@@ -1,6 +1,8 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import https from "https";
+import fs from "fs";
 import {
   createOAuthMetadata,
   mcpAuthMetadataRouter,
@@ -15,33 +17,29 @@ import { verifyAccessToken } from "./auth/verifyAccessToken.js";
 const app = express();
 
 app.use(express.json());
-app.use(cors());
-app.use((req, res, next) => {
-  console.debug(
-    `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`
-  );
-  next();
-});
 
-app.use((req, res, next) => {
-  const oldSend = res.send;
-  res.send = function (body) {
-    const wwwAuth = res.getHeader("WWW-Authenticate");
-    console.debug(
-      `[${new Date().toISOString()}] RESPONSE ${req.method} ${
-        req.originalUrl
-      } ${res.statusCode} ${
-        typeof body === "string" ? body : JSON.stringify(body)
-      }${wwwAuth ? `\nWWW-Authenticate: ${wwwAuth}` : ""}`
-    );
-    // @ts-ignore
-    return oldSend.call(this, body);
-  };
-  next();
-});
+const corsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS;
+if (corsAllowedOrigins) {
+  // Production: Use specific allowed origins
+  const allowedOrigins = corsAllowedOrigins
+    .split(",")
+    .map((origin) => origin.trim());
+  app.use(
+    cors({
+      origin: allowedOrigins,
+      credentials: true,
+    })
+  );
+} else {
+  // Development: Allow all origins (less secure, for local development only)
+  app.use(cors());
+}
 
 const PORT = parseInt(process.env.PORT || "3000");
 const ENABLE_OAUTH = process.env.ENABLE_OAUTH === "true";
+const ENABLE_HTTPS = process.env.ENABLE_HTTPS === "true";
+const SSL_KEY_PATH = process.env.SSL_KEY_PATH;
+const SSL_CERT_PATH = process.env.SSL_CERT_PATH;
 let proxyProvider: ProxyOAuthServerProvider | undefined;
 let oauthMetadata: OAuthMetadata | undefined;
 let scopesSupported: string[] | undefined;
@@ -137,7 +135,30 @@ if (
   app.use("/mcp", routes);
 }
 
-app.listen(PORT, () => {
-  console.log(`MCP HTTP Server listening on port ${PORT}`);
-  console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
-});
+// Start server with HTTP or HTTPS based on configuration
+if (ENABLE_HTTPS) {
+  if (!SSL_KEY_PATH || !SSL_CERT_PATH) {
+    console.error("HTTPS enabled but SSL_KEY_PATH or SSL_CERT_PATH not provided");
+    process.exit(1);
+  }
+
+  try {
+    const privateKey = fs.readFileSync(SSL_KEY_PATH, 'utf8');
+    const certificate = fs.readFileSync(SSL_CERT_PATH, 'utf8');
+    const credentials = { key: privateKey, cert: certificate };
+
+    const httpsServer = https.createServer(credentials, app);
+    httpsServer.listen(PORT, "127.0.0.1", () => {
+      console.log(`MCP HTTPS Server listening on port ${PORT}`);
+      console.log(`MCP endpoint: https://localhost:${PORT}/mcp`);
+    });
+  } catch (error) {
+    console.error("Failed to start HTTPS server:", error);
+    process.exit(1);
+  }
+} else {
+  app.listen(PORT, "127.0.0.1", () => {
+    console.log(`MCP HTTP Server listening on port ${PORT}`);
+    console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
+  });
+}
