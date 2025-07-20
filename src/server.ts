@@ -101,14 +101,11 @@ server.registerTool(
       "Get a list of all Matrix rooms the user has joined, including room names, IDs, and basic information",
     inputSchema: {},
   },
-  async (_input, extra): Promise<CallToolResult> => {
+  async (_input, { requestInfo, authInfo }): Promise<CallToolResult> => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -158,14 +155,11 @@ server.registerTool(
         .describe("Maximum number of messages to retrieve (default: 20)"),
     },
   },
-  async ({ roomId, limit }, extra) => {
+  async ({ roomId, limit }, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -235,14 +229,11 @@ server.registerTool(
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
     },
   },
-  async ({ roomId }, extra) => {
+  async ({ roomId }, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -316,14 +307,11 @@ server.registerTool(
         .describe("End date in ISO 8601 format (e.g., 2024-01-02T00:00:00Z)"),
     },
   },
-  async ({ roomId, startDate, endDate }, extra) => {
+  async ({ roomId, startDate, endDate }, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -397,14 +385,11 @@ server.registerTool(
         .describe("Maximum number of active users to return (default: 10)"),
     },
   },
-  async ({ roomId, limit }, extra) => {
+  async ({ roomId, limit }, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -470,14 +455,11 @@ server.registerTool(
       "List all users known to the Matrix client, including their display names and user IDs",
     inputSchema: {},
   },
-  async (_input, extra) => {
+  async (_input, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -528,14 +510,11 @@ server.registerTool(
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
     },
   },
-  async ({ roomId }, extra) => {
+  async ({ roomId }, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -620,14 +599,11 @@ server.registerTool(
         ),
     },
   },
-  async ({ targetUserId }, extra) => {
+  async ({ targetUserId }, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -705,14 +681,11 @@ server.registerTool(
       "Get your own profile information including display name, avatar, settings, and device list",
     inputSchema: {},
   },
-  async (_input, extra) => {
+  async (_input, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -817,14 +790,14 @@ server.registerTool(
         .describe("Maximum number of rooms to return (default: 20)"),
     },
   },
-  async ({ searchTerm, server, limit }, extra): Promise<CallToolResult> => {
+  async (
+    { searchTerm, server, limit },
+    { requestInfo, authInfo }
+  ): Promise<CallToolResult> => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -921,14 +894,11 @@ server.registerTool(
         .describe("Optional room ID to get counts for specific room only"),
     },
   },
-  async ({ roomFilter }, extra) => {
+  async ({ roomFilter }, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,
@@ -1047,14 +1017,11 @@ server.registerTool(
         .describe("Include DM rooms with no recent messages (default: false)"),
     },
   },
-  async ({ includeEmpty }, extra) => {
+  async ({ includeEmpty }, { requestInfo, authInfo }) => {
     const { matrixUserId, homeserverUrl } = getMatrixContext(
-      extra.requestInfo?.headers
+      requestInfo?.headers
     );
-    const accessToken = getAccessToken(
-      extra.requestInfo?.headers,
-      extra.authInfo?.token
-    );
+    const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
     const client = await createConfiguredMatrixClient(
       homeserverUrl,
       matrixUserId,

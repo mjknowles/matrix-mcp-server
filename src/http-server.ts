@@ -116,6 +116,5 @@ if (
 
 app.listen(PORT, () => {
   console.log(`MCP HTTP Server listening on port ${PORT}`);
-  console.log(`OAuth authentication: ${ENABLE_OAUTH ? "enabled" : "disabled"}`);
   console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
 });
