@@ -59,6 +59,23 @@ function getAccessToken(
 }
 
 /**
+ * Helper function to extract matrixUserId and homeserverUrl from headers
+ */
+function getMatrixContext(
+  headers: Record<string, string | string[] | undefined> | undefined
+): { matrixUserId: string; homeserverUrl: string } {
+  const matrixUserId =
+    (Array.isArray(headers?.["MATRIX_USER_ID"])
+      ? headers?.["MATRIX_USER_ID"][0]
+      : headers?.["MATRIX_USER_ID"]) || "";
+  const homeserverUrl =
+    (Array.isArray(headers?.["MATRIX_HOMESERVER_URL"])
+      ? headers?.["MATRIX_HOMESERVER_URL"][0]
+      : headers?.["MATRIX_HOMESERVER_URL"]) || defaultHomeserverUrl;
+  return { matrixUserId, homeserverUrl };
+}
+
+/**
  * Helper function to create Matrix client with proper configuration
  */
 async function createConfiguredMatrixClient(
@@ -82,17 +99,12 @@ server.registerTool(
     title: "List Joined Matrix Rooms",
     description:
       "Get a list of all Matrix rooms the user has joined, including room names, IDs, and basic information",
-    inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL (e.g., https://matrix.org)"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-    },
+    inputSchema: {},
   },
-  async ({ homeserverUrl, matrixUserId }, extra): Promise<CallToolResult> => {
+  async (_input, extra): Promise<CallToolResult> => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -139,13 +151,6 @@ server.registerTool(
     description:
       "Retrieve recent messages from a specific Matrix room, including text and image content",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
       limit: z
         .number()
@@ -153,7 +158,10 @@ server.registerTool(
         .describe("Maximum number of messages to retrieve (default: 20)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, roomId, limit }, extra) => {
+  async ({ roomId, limit }, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -224,17 +232,13 @@ server.registerTool(
     description:
       "List all members currently joined to a Matrix room with their display names and user IDs",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, roomId }, extra) => {
+  async ({ roomId }, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -303,13 +307,6 @@ server.registerTool(
     description:
       "Retrieve messages from a Matrix room within a specific date range",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
       startDate: z
         .string()
@@ -319,10 +316,10 @@ server.registerTool(
         .describe("End date in ISO 8601 format (e.g., 2024-01-02T00:00:00Z)"),
     },
   },
-  async (
-    { homeserverUrl, matrixUserId, roomId, startDate, endDate },
-    extra
-  ) => {
+  async ({ roomId, startDate, endDate }, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -393,13 +390,6 @@ server.registerTool(
     description:
       "Find the most active users in a Matrix room based on message count in recent history",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
       limit: z
         .number()
@@ -407,7 +397,10 @@ server.registerTool(
         .describe("Maximum number of active users to return (default: 10)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, roomId, limit }, extra) => {
+  async ({ roomId, limit }, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -475,17 +468,12 @@ server.registerTool(
     title: "Get All Known Users",
     description:
       "List all users known to the Matrix client, including their display names and user IDs",
-    inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-    },
+    inputSchema: {},
   },
-  async ({ homeserverUrl, matrixUserId }, extra) => {
+  async (_input, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -537,17 +525,13 @@ server.registerTool(
     description:
       "Get detailed information about a Matrix room including name, topic, settings, and member count",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       roomId: z.string().describe("Matrix room ID (e.g., !roomid:domain.com)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, roomId }, extra) => {
+  async ({ roomId }, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -629,13 +613,6 @@ server.registerTool(
     description:
       "Get profile information for a specific Matrix user including display name, avatar, and presence",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       targetUserId: z
         .string()
         .describe(
@@ -643,7 +620,10 @@ server.registerTool(
         ),
     },
   },
-  async ({ homeserverUrl, matrixUserId, targetUserId }, extra) => {
+  async ({ targetUserId }, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -723,17 +703,12 @@ server.registerTool(
     title: "Get My Matrix Profile",
     description:
       "Get your own profile information including display name, avatar, settings, and device list",
-    inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
-    },
+    inputSchema: {},
   },
-  async ({ homeserverUrl, matrixUserId }, extra) => {
+  async (_input, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -826,13 +801,6 @@ server.registerTool(
     description:
       "Search for public Matrix rooms that you can join, with optional filtering by name or topic",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       searchTerm: z
         .string()
         .optional()
@@ -849,10 +817,10 @@ server.registerTool(
         .describe("Maximum number of rooms to return (default: 20)"),
     },
   },
-  async (
-    { homeserverUrl, matrixUserId, searchTerm, server, limit },
-    extra
-  ): Promise<CallToolResult> => {
+  async ({ searchTerm, server, limit }, extra): Promise<CallToolResult> => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -947,20 +915,16 @@ server.registerTool(
     description:
       "Get unread message counts and notification status for Matrix rooms",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       roomFilter: z
         .string()
         .optional()
         .describe("Optional room ID to get counts for specific room only"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, roomFilter }, extra) => {
+  async ({ roomFilter }, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
@@ -1077,20 +1041,16 @@ server.registerTool(
     description:
       "List all direct message conversations with their recent activity and unread status",
     inputSchema: {
-      homeserverUrl: z
-        .string()
-        .default(defaultHomeserverUrl)
-        .describe("Matrix homeserver URL"),
-      matrixUserId: z
-        .string()
-        .describe("Full Matrix user ID (e.g., @username:domain.com)"),
       includeEmpty: z
         .boolean()
         .default(false)
         .describe("Include DM rooms with no recent messages (default: false)"),
     },
   },
-  async ({ homeserverUrl, matrixUserId, includeEmpty }, extra) => {
+  async ({ includeEmpty }, extra) => {
+    const { matrixUserId, homeserverUrl } = getMatrixContext(
+      extra.requestInfo?.headers
+    );
     const accessToken = getAccessToken(
       extra.requestInfo?.headers,
       extra.authInfo?.token
