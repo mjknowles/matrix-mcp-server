@@ -51,7 +51,7 @@ function getAccessToken(
   }
 
   // Get MATRIX_ACCESS_TOKEN from headers
-  const matrixToken = headers?.["MATRIX_ACCESS_TOKEN"];
+  const matrixToken = headers?.["matrix_access_token"];
   if (Array.isArray(matrixToken)) {
     return matrixToken[0] || "";
   }
@@ -65,13 +65,13 @@ function getMatrixContext(
   headers: Record<string, string | string[] | undefined> | undefined
 ): { matrixUserId: string; homeserverUrl: string } {
   const matrixUserId =
-    (Array.isArray(headers?.["MATRIX_USER_ID"])
-      ? headers?.["MATRIX_USER_ID"][0]
-      : headers?.["MATRIX_USER_ID"]) || "";
+    (Array.isArray(headers?.["matrix_user_id"])
+      ? headers?.["matrix_user_id"][0]
+      : headers?.["matrix_user_id"]) || "";
   const homeserverUrl =
-    (Array.isArray(headers?.["MATRIX_HOMESERVER_URL"])
-      ? headers?.["MATRIX_HOMESERVER_URL"][0]
-      : headers?.["MATRIX_HOMESERVER_URL"]) || defaultHomeserverUrl;
+    (Array.isArray(headers?.["matrix_homeserver_url"])
+      ? headers?.["matrix_homeserver_url"][0]
+      : headers?.["matrix_homeserver_url"]) || defaultHomeserverUrl;
   return { matrixUserId, homeserverUrl };
 }
 
@@ -114,7 +114,6 @@ server.registerTool(
 
     try {
       const rooms = client.getRooms();
-      console.log(`Found ${rooms.length} joined rooms`);
       return {
         content: rooms.map((room) => ({
           type: "text",
