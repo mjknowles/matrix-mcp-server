@@ -12,6 +12,7 @@ import { NotificationCountType } from "matrix-js-sdk";
 
 // Environment configuration
 const ENABLE_OAUTH = process.env.ENABLE_OAUTH === "true";
+const ENABLE_TOKEN_EXCHANGE = process.env.ENABLE_TOKEN_EXCHANGE === "true";
 const defaultHomeserverUrl =
   process.env.MATRIX_HOMESERVER_URL || "https://localhost:8008/";
 
@@ -61,7 +62,6 @@ function getAccessToken(
       typeof matrixTokenFromHeader === "string" &&
       matrixTokenFromHeader !== ""
     ) {
-      // If it's a string and not empty
       return matrixTokenFromHeader;
     }
   }
@@ -104,7 +104,8 @@ async function createConfiguredMatrixClient(
     userId: matrixUserId,
     accessToken,
     enableOAuth: ENABLE_OAUTH,
-    tokenExchangeConfig: ENABLE_OAUTH ? tokenExchangeConfig : undefined,
+    tokenExchangeConfig: tokenExchangeConfig,
+    enableTokenExchange: ENABLE_TOKEN_EXCHANGE,
   });
 }
 

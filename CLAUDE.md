@@ -9,23 +9,27 @@ This is a Matrix MCP (Model Context Protocol) server implemented in TypeScript t
 ## Core Architecture
 
 ### HTTP Server Layer (`src/http-server.ts`)
+
 - Express-based HTTP server exposing MCP endpoints
 - OAuth 2.0 integration with Keycloak authentication provider
 - Proxy OAuth provider for token verification and client management
 - Serves on port 3000 with `/mcp` endpoint for MCP communication
 
 ### MCP Server Implementation (`src/server.ts`)
+
 - Core MCP server with Matrix-specific tools
 - Implements token exchange flow with Keycloak for Matrix authentication
 - Provides tools for Matrix operations: room listing, message retrieval, member management
 - Each tool creates ephemeral Matrix clients that authenticate via token exchange
 
 ### Authentication Flow (`src/verifyAccessToken.ts`)
+
 - JWT token verification using Keycloak's JWKS endpoint
 - Fetches user information from Keycloak userinfo endpoint
 - Handles self-signed certificates for local development
 
 ### Request Routing (`src/routes.ts`, `src/route-handlers.ts`)
+
 - Simple Express router handling POST requests for MCP communication
 - Uses StreamableHTTPServerTransport for MCP protocol handling
 - Returns 405 for non-POST methods
@@ -61,6 +65,7 @@ npm test
 ## Matrix Tools Available
 
 The server provides these MCP tools (all require `matrixUserId` parameter):
+
 - `list-joined-rooms`: Get all rooms the authenticated user has joined
 - `get-room-messages`: Fetch recent messages from a specific room
 - `get-room-members`: List members of a specific room
@@ -69,10 +74,12 @@ The server provides these MCP tools (all require `matrixUserId` parameter):
 - `get-all-users`: List all users known to the Matrix client
 
 **Required Parameters for All Tools:**
+
 - `matrixUserId`: Full Matrix user ID (e.g., `@username:domain.com`)
 - `matrixAccessToken` (when OAuth disabled): Direct Matrix access token
 
 **Authentication Modes:**
+
 - **OAuth enabled**: Uses OAuth token exchange, `matrixAccessToken` parameter ignored
 - **OAuth disabled**: Requires `matrixAccessToken` parameter with valid Matrix access token
 
@@ -88,6 +95,7 @@ The server provides these MCP tools (all require `matrixUserId` parameter):
 **Breaking Change**: All Matrix tools now require explicit `matrixUserId` parameter instead of extracting username from OAuth token. This provides better control and works in both OAuth and non-OAuth modes.
 
 **Usage Examples:**
+
 ```json
 // OAuth mode (matrixAccessToken ignored)
 {
@@ -97,7 +105,7 @@ The server provides these MCP tools (all require `matrixUserId` parameter):
 
 // Non-OAuth mode (requires matrixAccessToken)
 {
-  "matrixUserId": "@alice:example.com", 
+  "matrixUserId": "@alice:example.com",
   "matrixAccessToken": "syt_YWxpY2U_abc123...",
   "roomId": "!abc123:example.com"
 }
@@ -106,25 +114,30 @@ The server provides these MCP tools (all require `matrixUserId` parameter):
 ## Environment Variables
 
 ### Core Configuration
+
 - `PORT`: Server port (default: 3000)
-- `ENABLE_OAUTH`: Set to "true" to enable OAuth authentication flow. When disabled, the MCP endpoint is accessible without authentication (experimental feature)
+- `ENABLE_OAUTH`: Set to "true" to enable OAuth authentication flow. When disabled, the MCP endpoint is accessible without authentication
+- `ENABLE_TOKEN_EXCHANGE`: Set to "true" to exchange the access token used to access this MCP server for one from the Matrix client in your IdP (assuming both this mcp server and your homeserver share the same IDP)
 - `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed origins for CORS. Leave empty for development (allows all origins). For production, specify allowed domains (e.g., "https://yourdomain.com,https://app.yourdomain.com")
 
 ### HTTPS Configuration
+
 - `ENABLE_HTTPS`: Set to "true" to enable HTTPS, "false" for HTTP (default: false for development)
 - `SSL_KEY_PATH`: Path to SSL private key file (required when ENABLE_HTTPS=true)
 - `SSL_CERT_PATH`: Path to SSL certificate file (required when ENABLE_HTTPS=true)
 
 ### Identity Provider Configuration (OAuth mode only)
+
 - `IDP_ISSUER_URL`: OAuth issuer URL (default: Keycloak localhost)
 - `IDP_AUTHORIZATION_URL`: OAuth authorization endpoint
-- `IDP_TOKEN_URL`: OAuth token endpoint  
+- `IDP_TOKEN_URL`: OAuth token endpoint
 - `IDP_REGISTRATION_URL`: OAuth client registration endpoint
 - `IDP_REVOCATION_URL`: OAuth token revocation endpoint
 - `OAUTH_CALLBACK_URL`: OAuth callback URL (default: http://localhost:3000/callback)
 - `MCP_SERVER_URL`: MCP server base URL (default: http://localhost:3000/mcp)
 
 ### Matrix Configuration
+
 - `MATRIX_HOMESERVER_URL`: Matrix homeserver URL (default: https://localhost:8008/)
 - `MATRIX_DOMAIN`: Matrix domain (default: matrix.example.com)
 - `MATRIX_CLIENT_ID`: Matrix client ID for token exchange
@@ -134,7 +147,8 @@ A `.env` file is provided with sensible defaults. Copy and modify as needed for 
 
 ## Token Exchange Flow (OAuth Mode Only)
 
-When `ENABLE_OAUTH=true`:
+When `ENABLE_OAUTH=true` and `ENABLE_TOKEN_EXCHANGE=true`:
+
 1. MCP client provides initial OAuth token
 2. Server exchanges token with Keycloak using client credentials
 3. Exchanged token used for Matrix homeserver authentication

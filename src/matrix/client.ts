@@ -13,16 +13,26 @@ export interface MatrixClientConfig {
   accessToken: string;
   enableOAuth: boolean;
   tokenExchangeConfig?: TokenExchangeConfig;
+  enableTokenExchange: boolean;
 }
 
 /**
  * Creates and initializes a Matrix client instance
- * 
+ *
  * @param config - Matrix client configuration
  * @returns Promise<MatrixClient> - Initialized Matrix client
  */
-export async function createMatrixClient(config: MatrixClientConfig): Promise<MatrixClient> {
-  const { homeserverUrl, userId, accessToken, enableOAuth, tokenExchangeConfig } = config;
+export async function createMatrixClient(
+  config: MatrixClientConfig
+): Promise<MatrixClient> {
+  const {
+    homeserverUrl,
+    userId,
+    accessToken,
+    enableOAuth,
+    tokenExchangeConfig,
+    enableTokenExchange,
+  } = config;
 
   if (!homeserverUrl) {
     throw new Error("Homeserver URL is required to create a Matrix client.");
@@ -33,12 +43,14 @@ export async function createMatrixClient(config: MatrixClientConfig): Promise<Ma
 
   let matrixAccessToken: string;
 
-  if (enableOAuth) {
+  if (enableOAuth && enableTokenExchange) {
     if (!accessToken) {
       throw new Error("Access token is required for OAuth token exchange.");
     }
     if (!tokenExchangeConfig) {
-      throw new Error("Token exchange configuration is required for OAuth mode.");
+      throw new Error(
+        "Token exchange configuration is required for OAuth mode."
+      );
     }
     matrixAccessToken = await exchangeToken(tokenExchangeConfig, accessToken);
   } else {
@@ -55,7 +67,7 @@ export async function createMatrixClient(config: MatrixClientConfig): Promise<Ma
     },
   });
 
-  if (enableOAuth && matrixAccessToken) {
+  if (enableOAuth && matrixAccessToken && enableTokenExchange) {
     // OAuth mode: use token exchange result to login
     const matrixLoginResponse = await client.loginRequest({
       type: "m.login.token",
@@ -70,7 +82,7 @@ export async function createMatrixClient(config: MatrixClientConfig): Promise<Ma
   }
 
   await client.startClient({ initialSyncLimit: 100 });
-  
+
   // Wait for the initial sync to complete
   await new Promise<void>((resolve, reject) => {
     client.once(ClientEvent.Sync, (state) => {
@@ -78,13 +90,13 @@ export async function createMatrixClient(config: MatrixClientConfig): Promise<Ma
       else reject(new Error(`Sync failed with state: ${state}`));
     });
   });
-  
+
   return client;
 }
 
 /**
  * Safely stops a Matrix client and cleans up resources
- * 
+ *
  * @param client - Matrix client to stop
  */
 export function stopMatrixClient(client: MatrixClient): void {
