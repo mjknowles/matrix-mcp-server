@@ -8,7 +8,6 @@
 
 - Node.js 20 or higher
 - npm (Node package manager)
-- access token; visible in Element in `All Settings --> Help & About --> Access Token`
 
 ## Setup Instructions
 
@@ -31,19 +30,39 @@
    npm run build
    ```
 
-4. **Test the Server**
+4. **Configure the Server**
+
+```bash
+cp .env.example .env
+# customize .env as appropriate for your setup
+```
+
+5. **Test the Server**
 
 ```bash
 npm run dev
 ```
 
+## Authentication Options
+
+You have a few authentication options controllable via environment variables.
+
+- `ENABLE_OAUTH`: if `true`, this will activate all the code in this MCP server related to adding OAuth authentication on the server; if `false` anyone can access the server with no `Bearer` token required.
+- `ENABLE_TOKEN_EXCHANGE`: if you've set up token exchange capability from your synapse/homeserver IdP client and your dynamically registered MCP clients then you can set this to `true` for the MCP server to take your initial `Bearer` token and exchange it for a token from the `synapse` client. This will make sure you have the right `aud` claim. If `false` then the server will pass along the `Bearer` token to the Matrix `/login` endpoint which will most likely fail unless you are much smarter than I at configuring your homeserver's OAuth setup.
+
+You also have an optional header key/value that you can attach if you can't get token exchange working. You can grab from Element in `All Settings --> Help & About --> Access Token`. The header key would then be `matrix_access_token` and the value would be the access token.
+
 ## Add to Claude Code
 
+Remember, the `matrix_access_token` header is an optional header. You should delete it if you have token exchange working.
+
 ```bash
-claude mcp add --transport http matrix-server http://localhost:3000/mcp -H "matrix_user_id:  @user1:matrix.example.com" -H "matrix_homeserver_url: https://localhost:8008" -H "matrix_access_token: ${MATRIX_ACCESS_TOKEN}" --header "Authorization: Bearer ${MATRIX_MCP_TOKEN}"
+claude mcp add --transport http matrix-server http://localhost:3000/mcp -H "matrix_user_id:  @user1:matrix.example.com" -H "matrix_homeserver_url: https://localhost:8008" --header "Authorization: Bearer ${MATRIX_MCP_TOKEN}"
 ```
 
 ## Add to VSCode
+
+Remember, the `MATRIX_ACCESS_TOKEN` header is an optional header. You should delete it if you have token exchange working.
 
 In mcp.json:
 
