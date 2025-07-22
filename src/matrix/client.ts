@@ -68,12 +68,20 @@ export async function createMatrixClient(
   });
 
   if (enableOAuth && matrixAccessToken && enableTokenExchange) {
-    // OAuth mode: use token exchange result to login
-    const matrixLoginResponse = await client.loginRequest({
-      type: "m.login.token",
-      token: matrixAccessToken,
-    });
-    client.setAccessToken(matrixLoginResponse.access_token);
+    try {
+      // OAuth mode: use token exchange result to login
+      const matrixLoginResponse = await client.loginRequest({
+        type: "org.matrix.login.jwt",
+        token: matrixAccessToken,
+      });
+      client.setAccessToken(matrixLoginResponse.access_token);
+    } catch (error) {
+      throw new Error(
+        `Failed to login to Matrix with OAuth token: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   } else if (matrixAccessToken) {
     // Non-OAuth mode: use provided Matrix access token directly
     client.setAccessToken(matrixAccessToken);
