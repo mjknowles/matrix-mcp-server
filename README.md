@@ -57,7 +57,7 @@ You also have an optional header key/value that you can attach if you can't get 
 Remember, the `matrix_access_token` header is an optional header. You should delete it if you have token exchange working.
 
 ```bash
-claude mcp add --transport http matrix-server http://localhost:3000/mcp -H "matrix_user_id:  @user1:matrix.example.com" -H "matrix_homeserver_url: https://localhost:8008" --header "Authorization: Bearer ${MATRIX_MCP_TOKEN}"
+claude mcp add --transport http matrix-server http://localhost:3000/mcp -H "matrix_user_id:  @user1:matrix.example.com" -H "matrix_homeserver_url: https://localhost:8008" --header "matrix_access_token: ${MATRIX_ACCESS_TOKEN}" --header "Authorization: Bearer ${MATRIX_MCP_TOKEN}"
 ```
 
 ## Add to VSCode
