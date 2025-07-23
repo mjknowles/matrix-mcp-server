@@ -11,6 +11,7 @@ export interface TokenExchangeConfig {
   matrixClientId: string;
 }
 
+
 /**
  * Exchanges an OAuth access token for a Matrix-specific token using OAuth 2.0 Token Exchange
  * 

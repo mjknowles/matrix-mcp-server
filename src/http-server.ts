@@ -13,6 +13,7 @@ import { ProxyOAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import routes from "./routes.js";
 import { verifyAccessToken } from "./auth/verifyAccessToken.js";
+import { shutdownAllClients } from "./matrix/clientCache.js";
 
 const app = express();
 
@@ -152,13 +153,51 @@ if (ENABLE_HTTPS) {
       console.log(`MCP HTTPS Server listening on port ${PORT}`);
       console.log(`MCP endpoint: https://localhost:${PORT}/mcp`);
     });
+
+    // Graceful shutdown handling for HTTPS server
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully...');
+      shutdownAllClients();
+      httpsServer.close(() => {
+        console.log('HTTPS server closed');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('SIGINT received, shutting down gracefully...');
+      shutdownAllClients();
+      httpsServer.close(() => {
+        console.log('HTTPS server closed');
+        process.exit(0);
+      });
+    });
   } catch (error) {
     console.error("Failed to start HTTPS server:", error);
     process.exit(1);
   }
 } else {
-  app.listen(PORT, "127.0.0.1", () => {
+  const server = app.listen(PORT, "127.0.0.1", () => {
     console.log(`MCP HTTP Server listening on port ${PORT}`);
     console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
+  });
+
+  // Graceful shutdown handling for HTTP server
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    shutdownAllClients();
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully...');
+    shutdownAllClients();
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
   });
 }

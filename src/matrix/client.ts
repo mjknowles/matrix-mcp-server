@@ -3,6 +3,7 @@ import { MatrixClient, ClientEvent } from "matrix-js-sdk";
 import https from "https";
 import fetch from "node-fetch";
 import { exchangeToken, TokenExchangeConfig } from "../auth/tokenExchange.js";
+import { getCachedClient, cacheClient, removeCachedClient } from "./clientCache.js";
 
 /**
  * Configuration for Matrix client creation
@@ -17,7 +18,7 @@ export interface MatrixClientConfig {
 }
 
 /**
- * Creates and initializes a Matrix client instance
+ * Creates and initializes a Matrix client instance, using cache when possible
  *
  * @param config - Matrix client configuration
  * @returns Promise<MatrixClient> - Initialized Matrix client
@@ -41,6 +42,13 @@ export async function createMatrixClient(
     throw new Error("User ID is required to create a Matrix client.");
   }
 
+  // Check for cached client first
+  const cachedClient = getCachedClient(userId, homeserverUrl);
+  if (cachedClient) {
+    return cachedClient;
+  }
+
+  // No cached client, create a new one
   let matrixAccessToken: string;
 
   if (enableOAuth && enableTokenExchange) {
@@ -67,50 +75,66 @@ export async function createMatrixClient(
     },
   });
 
-  if (enableOAuth && matrixAccessToken && enableTokenExchange) {
-    try {
+  try {
+    if (enableOAuth && matrixAccessToken && enableTokenExchange) {
       // OAuth mode: use token exchange result to login
       const matrixLoginResponse = await client.loginRequest({
         type: "org.matrix.login.jwt",
         token: matrixAccessToken,
       });
       client.setAccessToken(matrixLoginResponse.access_token);
-    } catch (error) {
-      throw new Error(
-        `Failed to login to Matrix with OAuth token: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+    } else if (matrixAccessToken) {
+      // Non-OAuth mode: use provided Matrix access token directly
+      client.setAccessToken(matrixAccessToken);
+    } else {
+      throw new Error("No valid access token available for Matrix client.");
     }
-  } else if (matrixAccessToken) {
-    // Non-OAuth mode: use provided Matrix access token directly
-    client.setAccessToken(matrixAccessToken);
-  } else {
-    throw new Error("No valid access token available for Matrix client.");
-  }
 
-  await client.startClient({ initialSyncLimit: 100 });
+    await client.startClient({ initialSyncLimit: 100 });
 
-  // Wait for the initial sync to complete
-  await new Promise<void>((resolve, reject) => {
-    client.once(ClientEvent.Sync, (state) => {
-      if (state === "PREPARED") resolve();
-      else reject(new Error(`Sync failed with state: ${state}`));
+    // Wait for the initial sync to complete
+    await new Promise<void>((resolve, reject) => {
+      client.once(ClientEvent.Sync, (state) => {
+        if (state === "PREPARED") resolve();
+        else reject(new Error(`Sync failed with state: ${state}`));
+      });
     });
-  });
 
-  return client;
+    // Cache the successfully created and synced client
+    cacheClient(client, userId, homeserverUrl);
+    
+    return client;
+  } catch (error) {
+    // If client creation failed, make sure to stop the client and don't cache it
+    try {
+      client.stopClient();
+    } catch (stopError) {
+      console.warn("Error stopping failed client:", stopError);
+    }
+    throw error;
+  }
 }
 
 /**
  * Safely stops a Matrix client and cleans up resources
+ * Note: This function is now deprecated since clients are cached and managed automatically.
+ * Clients should not be manually stopped as they may be reused by other operations.
  *
  * @param client - Matrix client to stop
+ * @deprecated Use cached clients instead, they are managed automatically
  */
-export function stopMatrixClient(client: MatrixClient): void {
-  try {
-    client.stopClient();
-  } catch (error) {
-    console.warn("Error stopping Matrix client:", error);
-  }
+export function stopMatrixClient(_client: MatrixClient): void {
+  // For now, do nothing - clients are managed by the cache
+  // In the future, we may want to remove this function entirely
+  console.warn("stopMatrixClient called - clients are now cached and should not be manually stopped");
+}
+
+/**
+ * Remove a client from cache and stop it (for error recovery)
+ *
+ * @param userId - Matrix user ID  
+ * @param homeserverUrl - Matrix homeserver URL
+ */
+export function removeClientFromCache(userId: string, homeserverUrl: string): void {
+  removeCachedClient(userId, homeserverUrl);
 }

@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { createMatrixClient, stopMatrixClient } from "./matrix/client.js";
+import { createMatrixClient, removeClientFromCache } from "./matrix/client.js";
 import {
   processMessage,
   processMessagesByDate,
@@ -123,13 +123,14 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
+    
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
+
       const rooms = client.getRooms();
       return {
         content: rooms.map((room) => ({
@@ -141,6 +142,8 @@ server.registerTool(
       };
     } catch (error: any) {
       console.error(`Failed to list joined rooms: ${error.message}`);
+      // Remove client from cache on error
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -150,8 +153,6 @@ server.registerTool(
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -176,13 +177,14 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
+    
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
+
       const room = client.getRoom(roomId);
       if (!room) {
         return {
@@ -219,6 +221,7 @@ server.registerTool(
       };
     } catch (error: any) {
       console.error(`Failed to get room messages: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -228,8 +231,6 @@ server.registerTool(
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -250,13 +251,14 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
+    
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
+
       const room = client.getRoom(roomId);
       if (!room) {
         return {
@@ -291,6 +293,7 @@ server.registerTool(
       };
     } catch (error: any) {
       console.error(`Failed to get room members: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -300,8 +303,6 @@ server.registerTool(
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -328,13 +329,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const room = client.getRoom(roomId);
       if (!room) {
         return {
@@ -371,6 +371,7 @@ server.registerTool(
       };
     } catch (error: any) {
       console.error(`Failed to filter messages by date: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -380,8 +381,6 @@ server.registerTool(
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -406,13 +405,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const room = client.getRoom(roomId);
       if (!room) {
         return {
@@ -447,6 +445,7 @@ server.registerTool(
       };
     } catch (error: any) {
       console.error(`Failed to identify active users: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -456,8 +455,6 @@ server.registerTool(
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -476,13 +473,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const users = client.getUsers();
       return {
         content:
@@ -500,6 +496,7 @@ server.registerTool(
       };
     } catch (error: any) {
       console.error(`Failed to get all users: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -509,8 +506,6 @@ server.registerTool(
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -531,13 +526,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const room = client.getRoom(roomId);
       if (!room) {
         return {
@@ -585,6 +579,7 @@ Created: ${createdAt}`,
       };
     } catch (error: any) {
       console.error(`Failed to get room info: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -594,8 +589,6 @@ Created: ${createdAt}`,
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -620,13 +613,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const user = client.getUser(targetUserId);
       if (!user) {
         return {
@@ -673,6 +665,7 @@ Shared Rooms (up to 5): ${
       };
     } catch (error: any) {
       console.error(`Failed to get user profile: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -682,8 +675,6 @@ Shared Rooms (up to 5): ${
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -702,13 +693,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const user = client.getUser(matrixUserId);
       if (!user) {
         return {
@@ -767,6 +757,7 @@ ${deviceInfo}`,
       };
     } catch (error: any) {
       console.error(`Failed to get my profile: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -776,8 +767,6 @@ ${deviceInfo}`,
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -814,13 +803,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const searchOptions: any = {
         limit,
         include_all_known_networks: true,
@@ -881,6 +869,7 @@ Room ID: ${room.room_id}`,
       };
     } catch (error: any) {
       console.error(`Failed to search public rooms: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -890,8 +879,6 @@ Room ID: ${room.room_id}`,
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -915,13 +902,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const rooms = client.getRooms();
       let filteredRooms = rooms;
 
@@ -1004,6 +990,7 @@ Rooms with notifications: ${roomNotifications.length}`,
       };
     } catch (error: any) {
       console.error(`Failed to get notification counts: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -1013,8 +1000,6 @@ Rooms with notifications: ${roomNotifications.length}`,
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
@@ -1038,13 +1023,12 @@ server.registerTool(
       requestInfo?.headers
     );
     const accessToken = getAccessToken(requestInfo?.headers, authInfo?.token);
-    const client = await createConfiguredMatrixClient(
-      homeserverUrl,
-      matrixUserId,
-      accessToken
-    );
-
     try {
+      const client = await createConfiguredMatrixClient(
+        homeserverUrl,
+        matrixUserId,
+        accessToken
+      );
       const rooms = client.getRooms();
 
       // Filter for DM rooms (rooms with exactly 2 members where user is joined)
@@ -1139,6 +1123,7 @@ Mentions: ${mentionCount}`,
       };
     } catch (error: any) {
       console.error(`Failed to get direct messages: ${error.message}`);
+      removeClientFromCache(matrixUserId, homeserverUrl);
       return {
         content: [
           {
@@ -1148,8 +1133,6 @@ Mentions: ${mentionCount}`,
         ],
         isError: true,
       };
-    } finally {
-      stopMatrixClient(client);
     }
   }
 );
