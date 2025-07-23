@@ -54,6 +54,18 @@ You also have an optional header key/value that you can attach if you can't get 
 
 ## Add to Claude Code
 
+Currently Claude does not have an interactive way to obtain a bearer token so if you need one...
+
+### Get Bearer Token
+
+Run [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) and point it to the MCP server. This server utilizes the Steaming HTTP protocol. Run Inspector's Authentication functionality to obtain your homeserver access token.
+
+```bash
+npx @modelcontextprotocol/inspector
+```
+
+### Add the MCP Server to Claude Code
+
 Remember, the `matrix_access_token` header is an optional header. You should delete it if you have token exchange working.
 
 ```bash
