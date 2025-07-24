@@ -69,61 +69,61 @@
   - **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `includeEmpty?`
   - **Why Essential**: DMs are a primary use case
 
-### Tier 1: Essential Actions (High Priority)
+### Tier 1: Essential Actions (High Priority) ✅ **COMPLETED**
 
-#### 1. `send-message` - Send text messages to rooms
-- [ ] **SDK Methods**: `sendTextMessage()`, `sendHtmlMessage()`, `sendEmoteMessage()`
-- [ ] **Features**: Plain text, HTML formatted, emote messages, reply to specific messages
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomId`, `message`, `messageType?`, `replyToEventId?`
-- [ ] **Why Essential**: Core communication functionality
+#### 1. `send-message` - Send text messages to rooms ✅ **COMPLETED**
+- [x] **SDK Methods**: `sendTextMessage()`, `sendHtmlMessage()`, `sendEmoteMessage()`
+- [x] **Features**: Plain text, HTML formatted, emote messages, reply to specific messages
+- [x] **Schema**: `roomId`, `message`, `messageType?`, `replyToEventId?`
+- [x] **Why Essential**: Core communication functionality
 
-#### 2. `send-direct-message` - Send DMs to users
-- [ ] **SDK Methods**: `createRoom()` for new DMs + `sendTextMessage()`
-- [ ] **Features**: Find existing DM room or create new one, send message
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `targetUserId`, `message`
-- [ ] **Why Essential**: Private communication is fundamental
+#### 2. `send-direct-message` - Send DMs to users ✅ **COMPLETED**
+- [x] **SDK Methods**: `createRoom()` for new DMs + `sendTextMessage()`
+- [x] **Features**: Find existing DM room or create new one, send message, update m.direct account data
+- [x] **Schema**: `targetUserId`, `message`
+- [x] **Why Essential**: Private communication is fundamental
 
-#### 3. `join-room` - Join rooms by ID or alias
-- [ ] **SDK Methods**: `joinRoom()`
-- [ ] **Features**: Join by room ID or alias, handle invites, error handling for private rooms
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomIdOrAlias`
-- [ ] **Why Essential**: Users need to join rooms to participate
+#### 3. `join-room` - Join rooms by ID or alias ✅ **COMPLETED**
+- [x] **SDK Methods**: `joinRoom()`
+- [x] **Features**: Join by room ID or alias, handle invites, error handling for private rooms, membership checks
+- [x] **Schema**: `roomIdOrAlias`
+- [x] **Why Essential**: Users need to join rooms to participate
 
-#### 4. `leave-room` - Leave rooms
-- [ ] **SDK Methods**: `leave()`
-- [ ] **Features**: Leave room, optional reason message
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomId`, `reason?`
-- [ ] **Why Essential**: Users need to manage their room membership
+#### 4. `leave-room` - Leave rooms ✅ **COMPLETED**
+- [x] **SDK Methods**: `leave()`
+- [x] **Features**: Leave room, optional reason message, membership validation
+- [x] **Schema**: `roomId`, `reason?`
+- [x] **Why Essential**: Users need to manage their room membership
 
-#### 5. `create-room` - Create new rooms
-- [ ] **SDK Methods**: `createRoom()`
-- [ ] **Features**: Public/private rooms, set name/topic, invite users, room settings
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomName`, `isPrivate?`, `topic?`, `inviteUsers?`
-- [ ] **Why Essential**: Room creation is a core Matrix feature
+#### 5. `create-room` - Create new rooms ✅ **COMPLETED**
+- [x] **SDK Methods**: `createRoom()`
+- [x] **Features**: Public/private rooms, set name/topic, invite users, room settings, aliases, security settings
+- [x] **Schema**: `roomName`, `isPrivate?`, `topic?`, `inviteUsers?`, `roomAlias?`
+- [x] **Why Essential**: Room creation is a core Matrix feature
 
-#### 6. `invite-user` - Invite users to rooms
-- [ ] **SDK Methods**: `invite()`
-- [ ] **Features**: Invite user to room, handle already-invited cases, error messages
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomId`, `targetUserId`
-- [ ] **Why Essential**: Basic room management functionality
+#### 6. `invite-user` - Invite users to rooms ✅ **COMPLETED**
+- [x] **SDK Methods**: `invite()`
+- [x] **Features**: Invite user to room, handle already-invited cases, membership checks, power level validation
+- [x] **Schema**: `roomId`, `targetUserId`
+- [x] **Why Essential**: Basic room management functionality
 
 #### 7. `send-file` - Upload and send files
 - [ ] **SDK Methods**: `uploadContent()` + `sendMessage()` with file content
 - [ ] **Features**: Upload files, images, documents with optional captions
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomId`, `filePath`, `caption?`
+- [ ] **Schema**: `roomId`, `filePath`, `caption?`
 - [ ] **Why Essential**: File sharing is core functionality
 
-#### 8. `set-room-name` - Update room name
-- [ ] **SDK Methods**: `setRoomName()`
-- [ ] **Features**: Change room display name, permission checks
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomId`, `roomName`
-- [ ] **Why Essential**: Basic room administration
+#### 8. `set-room-name` - Update room name ✅ **COMPLETED**
+- [x] **SDK Methods**: `setRoomName()`
+- [x] **Features**: Change room display name, permission checks, power level validation
+- [x] **Schema**: `roomId`, `roomName`
+- [x] **Why Essential**: Basic room administration
 
-#### 9. `set-room-topic` - Update room topic/description  
-- [ ] **SDK Methods**: `setRoomTopic()`
-- [ ] **Features**: Set room topic/description, permission checks
-- [ ] **Schema**: `homeserverUrl`, `matrixUserId`, `matrixAccessToken`, `roomId`, `topic`
-- [ ] **Why Essential**: Basic room administration
+#### 9. `set-room-topic` - Update room topic/description ✅ **COMPLETED**
+- [x] **SDK Methods**: `setRoomTopic()`
+- [x] **Features**: Set room topic/description, permission checks, power level validation
+- [x] **Schema**: `roomId`, `topic`
+- [x] **Why Essential**: Basic room administration
 
 ### Tier 2: Analytics & Intelligence (High Priority)
 
