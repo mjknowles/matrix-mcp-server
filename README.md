@@ -13,22 +13,22 @@
 
 1. **Clone the Repository**
 
-   ```bash
-   git clone <repository-url>
-   cd matrix-mcp-server
-   ```
+```bash
+git clone <repository-url>
+cd matrix-mcp-server
+```
 
 2. **Install Dependencies**
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
 3. **Build the Server**
 
-   ```bash
-   npm run build
-   ```
+```bash
+npm run build
+```
 
 4. **Configure the Server**
 
