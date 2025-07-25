@@ -235,7 +235,7 @@ MATRIX_CLIENT_SECRET="your-matrix-client-secret"
 
 ### Claude Code
 
-Remember, the `MATRIX_ACCESS_TOKEN` header is an optional header. You should delete it if you have token exchange working.
+Remember, the `MATRIX_ACCESS_TOKEN` header is an optional header. You should delete it if you have token exchange working. Obtain `MATRIX_MCP_TOKEN` from MCP Inspector.
 
 ```bash
 claude mcp add --transport http matrix-server http://localhost:3000/mcp -H "matrix_user_id:  @user1:matrix.example.com" -H "matrix_homeserver_url: https://localhost:8008" -H "matrix_access_token: ${MATRIX_ACCESS_TOKEN}" -H "Authorization: Bearer ${MATRIX_MCP_TOKEN}"
@@ -280,7 +280,7 @@ npm run dev
 npx @modelcontextprotocol/inspector
 ```
 
-Connect to `http://localhost:3000/mcp` to test all available tools.
+Connect to `http://localhost:3000/mcp` to authenticate and test all available tools.
 
 ## Development
 
