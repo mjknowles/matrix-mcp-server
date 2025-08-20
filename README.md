@@ -1,3 +1,5 @@
+[![MSeeP.ai Security Assessment Badge](https://mseep.net/pr/mjknowles-matrix-mcp-server-badge.png)](https://mseep.ai/app/mjknowles-matrix-mcp-server)
+
 # Matrix MCP Server
 
 A comprehensive **Model Context Protocol (MCP) server** that provides secure access to Matrix homeserver functionality. Built with TypeScript, this server enables MCP clients to interact with Matrix rooms, messages, users, and more through a standardized interface.
