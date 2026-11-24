@@ -70,8 +70,16 @@ export async function createMatrixClient(
     baseUrl: homeserverUrl,
     userId,
     fetchFn: async (input: any, init?: any) => {
-      const agent = new https.Agent({ rejectUnauthorized: false });
-      return fetch(input, { ...(init || {}), agent }) as any;
+      // TLS verification is on by default; it can only be disabled explicitly
+      // for a self-signed homeserver via MATRIX_ALLOW_INSECURE_TLS=1.
+      const allowInsecure = process.env.MATRIX_ALLOW_INSECURE_TLS === "1";
+      const agent = allowInsecure
+        ? new https.Agent({ rejectUnauthorized: false })
+        : undefined;
+      return fetch(input, {
+        ...(init || {}),
+        ...(agent ? { agent } : {}),
+      }) as any;
     },
   });
 
@@ -93,12 +101,7 @@ export async function createMatrixClient(
     await client.startClient({ initialSyncLimit: 100 });
 
     // Wait for the initial sync to complete
-    await new Promise<void>((resolve, reject) => {
-      client.once(ClientEvent.Sync, (state) => {
-        if (state === "PREPARED") resolve();
-        else reject(new Error(`Sync failed with state: ${state}`));
-      });
-    });
+    await waitForInitialSync(client, homeserverUrl);
 
     // Cache the successfully created and synced client
     cacheClient(client, userId, homeserverUrl);
@@ -113,6 +116,92 @@ export async function createMatrixClient(
     }
     throw error;
   }
+}
+
+const DEFAULT_SYNC_TIMEOUT_MS = 30_000;
+
+/**
+ * Turn a matrix-js-sdk sync error into one readable line.
+ * A homeserver behind a proxy that is down surfaces as a bare HTTP 502 with
+ * no message, which is useless in a log or in an MCP tool error.
+ */
+function describeSyncError(error: unknown): string {
+  if (!error) return "no error reported by the homeserver";
+  const e = error as {
+    message?: string;
+    httpStatus?: number;
+    errcode?: string;
+    data?: { error?: string; errcode?: string };
+  };
+  const parts = [
+    e.httpStatus ? `HTTP ${e.httpStatus}` : undefined,
+    e.errcode ?? e.data?.errcode,
+    e.message ?? e.data?.error,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(": ") : String(error);
+}
+
+/**
+ * Wait until the client's initial sync reaches PREPARED.
+ *
+ * The sync stream emits SYNCING, RECONNECTING, ERROR and STOPPED before (or
+ * instead of) PREPARED, so waiting for the *first* event of any kind fails a
+ * perfectly good client on a transient reconnect. This waits for PREPARED,
+ * keeps the last error, and gives up after a timeout with a message that names
+ * the homeserver and the underlying cause instead of "Sync failed with state:
+ * ERROR".
+ */
+export async function waitForInitialSync(
+  client: MatrixClient,
+  homeserverUrl: string,
+  timeoutMs: number = Number(
+    process.env.MATRIX_SYNC_TIMEOUT_MS ?? DEFAULT_SYNC_TIMEOUT_MS
+  )
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    let lastState = "UNKNOWN";
+    let lastError: unknown;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      client.off(ClientEvent.Sync, onSync);
+    };
+
+    const onSync = (
+      state: string,
+      _prevState: string | null,
+      data?: { error?: unknown }
+    ) => {
+      lastState = state;
+      if (state === "ERROR" && data?.error) lastError = data.error;
+
+      if (state === "PREPARED") {
+        cleanup();
+        resolve();
+        return;
+      }
+      if (state === "STOPPED") {
+        cleanup();
+        reject(
+          new Error(
+            `Matrix sync stopped before completing the initial sync with ${homeserverUrl}.`
+          )
+        );
+      }
+    };
+
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(
+        new Error(
+          `Timed out after ${timeoutMs}ms waiting for the initial sync from ${homeserverUrl} ` +
+            `(last state: ${lastState}; ${describeSyncError(lastError)}).`
+        )
+      );
+    }, timeoutMs);
+
+    client.on(ClientEvent.Sync, onSync);
+  });
 }
 
 /**
